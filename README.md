@@ -11,6 +11,7 @@ Convert common variant formats to VCF format
 --reference         Reference FASTA file                                    [mandatory]
 --basename          Prefix for output file(s)                               ["all2vcf_isec"]
 --output-dir        Output directory (if not existent, will be created)     [current]
+
 ```
 
 <description to be added>
@@ -23,7 +24,8 @@ Convert common variant formats to VCF format
 --type              Restrict the output to SNP|INDEL|ALL                    [ALL]
 --head-in           Use this flag if the file has a header                  [off]
 --head-out          Add a newly-generated VCF header to the output          [off]
---no-Ns             Exclude variants featuring Ns 				                  [off]
+--no-Ns             Exclude variants featuring Ns                           [off]
+
 ```
 
 <description to be added>
