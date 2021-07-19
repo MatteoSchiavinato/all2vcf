@@ -1,0 +1,315 @@
+#!/usr/bin/env python3
+
+import pandas as pd
+import argparse as ap
+from time import asctime as at
+import sys
+import os
+from Bio import SeqIO as seqio
+import time
+import random
+import string
+
+
+if len(sys.argv) <= 1:
+	sys.argv.append("-h")
+
+if sys.argv[1] in ["-h", "--help", "getopt", "usage", "-help", "help"]:
+	sys.exit('''
+
+--------------------------------------------------------------------------------
+all2vcf isec
+--------------------------------------------------------------------------------
+
+USAGE:  all2vcf isec [ options ]
+
+Convert "sites.txt" file produced by bcftools isec into a VCF file.
+The output VCF file is in VCF version 4.2
+
+OPTIONS:
+
+--sites             Input "sites.txt" file from bcftools isec               [mandatory]
+--vcf               Input VCF files used in isec, IN THE SAME ORDER         [mandatory]
+--vcf-names         Names of the input VCF files, IN THE SAME ORDER         [mandatory]
+--reference         Reference FASTA file                                    [mandatory]
+--basename          Prefix for output file(s)                               ["all2vcf_isec"]
+--output-dir        Output directory (if not existent, will be created)     [current]
+
+''')
+
+
+# parser
+p = ap.ArgumentParser()
+p.add_argument("--sites", type=str, required=True)
+p.add_argument("--vcf", nargs="+", required=True)
+p.add_argument("--reference", required=True)
+p.add_argument("--vcf-names", nargs="+", required=True)
+p.add_argument("--basename", type=str, default="all2vcf_isec")
+p.add_argument("--output-dir", default=".", type=str)
+args = p.parse_args()
+
+### vcf version ###
+vcf_version = 4.2
+
+# functions
+# ---------
+
+def codes_to_names(Isec_codes, Vcf_names):
+    # function to convert numerical presence/absence codes (e.g. 011)
+    # to actual file names to add in the INFO field
+    #
+    # associate a name to each code
+    Code_names = {}
+    Unique_codes = list(set(Isec_codes.values()))
+    for code in Unique_codes:
+        # iterate by character in code
+        Names = []
+        for idx in range(0,len(code)):
+            char = code[idx]
+            if char == '0':
+                pass
+            elif char == '1':
+                Names.append(Vcf_names[idx])
+            else:
+                sys.stderr.write('ERROR: Something needs DEBUG in the "codes_to_names()" function\n')
+                sys.exit(1)
+        name = "+".join(Names)
+        Code_names[code] = name
+    #
+    return Code_names
+
+def add_isec(handle, Isec_codes):
+    # function to add the isec code (e.g. 011)
+    # this way one can know which files carried the variant originally
+    try:
+        return str(Isec_codes[handle])
+    except KeyError:
+        return "NA"
+
+def add_isec_name(isec_code, Isec_names):
+    # function to add the isec name (corresponding to the code, e.g. 011="FNL+ABC")
+    # this way one can know which files carried the variant originally
+    # goes in combination with add_isec()
+    try:
+        return str(Isec_names[isec_code])
+    except KeyError:
+        return "NA"
+
+def get_vcf_header(ref, vcf_version):
+    # function to get a proper VCF header out of a reference FASTA file
+    # a date is obtained in the needed format using asctime
+    # the initial lines of the VCF file are generated
+    # the FASTA file is parsed with biopython
+    # for each contig, the length is calculated
+    # a contig line is generated with this information
+    # a final line with the column names is added
+    # and the header is ready and returned
+    #
+    Header = [
+    f"##fileformat=VCFv{vcf_version}",
+    time.strftime("##fileDate=%Y-%m-%d|%I:%M:%S%p|%Z|%z"),
+    "##source=all2vcf",
+    ]
+    #
+    Fasta = seqio.parse(ref, "fasta")
+    #
+    for record in Fasta:
+        id = str(record.id)
+        length = len(record.seq)
+        ctg_line = f"##contig=<ID={id},length={length}>"
+        Header.append(ctg_line)
+    #
+    Header = Header + [
+    '##INFO=<ID=ISEC,Number=1,Type=String,Description="Original bcftools isec presence/absence code">',
+    '##INFO=<ID=SAMPLES,Number=1,Type=String,Description="Source samples in which the variant was found">',
+    '##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">',
+    "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO",
+    ]
+    #
+    return Header
+
+def convert_to_dictionary(lst):
+    # function to convert a "=" separated list
+    # to a dictionary
+    dict = [ x.split("=") for x in lst ]
+    dict = { x[0]:x[1] for x in dict }
+    return dict
+
+Safe_keys = ["ISEC", "SAMPLES", "SVTYPE"]
+def select_relevant_keys(dict, Safe_keys):
+    # function to select only keys that are not sample-dependent
+    # e.g. SVTYPE for structural variants
+    #
+    # update this "Safe_keys" list if you find more
+    #
+    new_dict = { key:dict[key] for key in dict.keys() if key in Safe_keys }
+    return new_dict
+
+def flatten_dictionary(dict):
+    # function to flatten a dictionary
+    # obtained from a VCF INFO field
+    # returns a string
+    # that could fit in a VCF INFO field
+    flat_dict = [ str(key) + "=" + str(dict[key]) for key in dict.keys() ]
+    flat_out = ";".join(flat_dict)
+    return flat_out
+
+def add_unique_code(id):
+    new_id = id + "_" + "".join([random.choice(string.ascii_letters) for i in range(0,5)])
+    return new_id
+
+# create workspace
+# ----------------
+os.makedirs(args.output_dir, exist_ok=True)
+
+# read vcf names
+# --------------
+Vcf_names = args.vcf_names
+
+# read sites file
+# ---------------
+# this file is not a VCF file but it has elements of it
+# such as REF, ALT, POS, CHROM
+# the SRC field is the source files
+# for example if there are three files that were used in isec
+# then the source will have three digits (e.g. 010)
+# each digit represents an input file from bcftools isec
+# if the digit is set to 0: the variant was NOT found in that file
+# if the digit is set to 1: the variant WAS found in that file
+# e.g. a SRC of "111" means all three files had the variant
+# e.g. a SRC of "011" means only the second and third file had the variant
+#
+# we form index of dataframe with chrom, pos, and the first three chars of alt
+# this forms a unique key that we can use as index
+# to later filter out unwanted variants
+sys.stderr.write(f"[{at()}] Reading the \"sites\" file ... ")
+
+sites = pd.read_csv(args.sites, sep="\t", comment="#", header=None, dtype="object")
+sites.columns = ["CHROM", "POS", "REF", "ALT", "SRC"]
+# form filehandle
+sites["HANDLE"] = sites["CHROM"] + sites["POS"] + sites["ALT"].str[0:3]
+# get association between handle and isec-code
+Isec_codes = {}
+for tup in sites.itertuples():
+    handle = tup.HANDLE
+    source = tup.SRC
+    Isec_codes[handle] = source
+# get association between isec-code and file name
+Isec_names = codes_to_names(Isec_codes, Vcf_names)
+# drop handle and form index
+sites.index = sites["HANDLE"]
+sites = sites.drop("HANDLE", axis=1)
+
+sys.stderr.write("DONE\n")
+sys.stderr.write(f"[{at()}] {sites.shape[0]} variants found \n")
+
+# read vcf files
+# --------------
+# these are normal VCF files
+# after renaming the columns
+#
+# first we read the headers of the original files
+# to use them later
+#
+# then we read the actual files
+#
+# we form index of dataframe with chrom, pos, and the first three chars of alt
+# this forms a unique key that we can use as index
+# to later filter out unwanted variants
+#
+# then we use the index from "sites" to filter out unwanted lines
+sys.stderr.write(f"[{at()}] Keeping only {sites.shape[0]} variants that are found in the \"sites\" file ... ")
+
+Vcf_files = [ pd.read_csv(input_vcf, comment="#", header=None, sep="\t", dtype="object") for input_vcf in args.vcf ]
+Lst = []
+for vcf in Vcf_files:
+    vcf.columns = ["CHROM","POS","ID","REF","ALT","QUAL","FILTER","INFO","FORMAT","OTHER"]
+    vcf = vcf.drop(["FORMAT", "OTHER"], axis=1)
+    vcf["HANDLE"] = vcf["CHROM"] + vcf["POS"] + vcf["ALT"].str[0:3]
+    vcf.index = vcf["HANDLE"]
+    # add isec code
+    vcf["ISEC"] = vcf["HANDLE"].apply(lambda x:add_isec(x, Isec_codes))
+    vcf["ISEC_NAME"] = vcf["ISEC"].apply(lambda x:add_isec_name(x, Isec_names))
+    vcf["INFO"] = "ISEC=" + vcf["ISEC"] + ";" + "SAMPLES=" + vcf["ISEC_NAME"] + ";" + vcf["INFO"]
+    # drop handle
+    vcf = vcf.drop(["HANDLE", "ISEC", "ISEC_NAME"], axis=1)
+    # get intersection of index between sites file and vcf file
+    s1 = set(sites.index)
+    s2 = set(vcf.index)
+    new_index = list(s1.intersection(s2))
+    vcf = vcf.loc[new_index, :]
+    Lst.append(vcf)
+
+Vcf_files = Lst
+
+sys.stderr.write("DONE\n")
+sys.stderr.write(f"[{at()}] Kept {str([vcf.shape[0] for vcf in Vcf_files])} variants from {str(args.vcf)}, respectively\n")
+
+
+# concatenate filtered headers and vcf files
+# ------------------------------------------
+# header and variants are concatenated in a single file
+# after filtering
+#
+# and then written to output as separate files
+sys.stderr.write(f"[{at()}] Writing to output a filtered VCF file for each original VCF file ... ")
+
+Header = get_vcf_header(args.reference, vcf_version)
+
+for i in range(0, len(Vcf_files)):
+    vcf = Vcf_files[i]
+    vcf_name = Vcf_names[i]
+    output_lines = vcf.values.tolist()
+    output_lines = [ [str(x) for x in lst] for lst in output_lines ]
+    output_lines = [ "\t".join(lst) for lst in output_lines ]
+    out = Header + output_lines
+    #
+    output_file = args.output_dir + "/" + args.basename + "." + "sites" + "." + "from_" + vcf_name + ".tsv"
+    OUTPUT = open(output_file, "w")
+    for line in out:
+        OUTPUT.write(line + "\n")
+    OUTPUT.close()
+
+sys.stderr.write("DONE\n")
+
+
+# getting the "sites.vcf" file
+# ----------------------------
+sys.stderr.write(f"[{at()}] Generating a VCF version of the \"sites\" file ... ")
+
+Lst = []
+for vcf in Vcf_files:
+    vcf["INFO"] = vcf["INFO"].str.split(";")
+    vcf["INFO"] = vcf["INFO"].apply(lambda x:convert_to_dictionary(x))
+    vcf["INFO"] = vcf["INFO"].apply(lambda x:select_relevant_keys(x, Safe_keys))
+    vcf["INFO"] = vcf["INFO"].apply(lambda x:flatten_dictionary(x))
+    Lst.append(vcf)
+
+Out = []
+Vcf_files = Lst
+df = pd.concat(Vcf_files)
+df = df.reset_index()
+df = df.groupby("HANDLE").first()
+df = df.reset_index(drop=True)
+df["ID"] = df[["CHROM", "POS"]].agg("_".join, axis=1)
+df["ID"] = df["ID"].apply(lambda x:add_unique_code(x))
+df["len_CHROMNAME"] = df["CHROM"].str.len()
+df["POS"] = df["POS"].astype(int)
+df = df.sort_values(by=["len_CHROMNAME", "CHROM", "POS"], ascending=True)
+df = df.reset_index(drop=True)
+df = df.drop("len_CHROMNAME", axis=1)
+
+for lst in df.values.tolist():
+    line = "\t".join(lst)
+    Out.append(line)
+
+Out = Header + Out
+
+outfile = args.output_dir + "/" + args.basename + "." + "sites.vcf"
+OUTPUT = open(outfile, "w")
+for line in Out:
+    OUTPUT.write(line + "\n")
+OUTPUT.close()
+
+sys.stderr.write("DONE\n")
+sys.stderr.write(f"[{at()}] Generated a VCF file with {df.shape[0]} variants\n")
