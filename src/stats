@@ -67,8 +67,8 @@ for input_file in args.vcf:
     INPUT.close()
 
     # read input file
-    df = pd.read_csv(input_file, sep="\t", header=None, comment="#")
-    df.columns = ["CHROM","POS","ID","REF","ALT","QUAL","FILTER","INFO","FORMAT","FNL"]
+    df = pd.read_csv(input_file, sep="\t", header=None, usecols=range(0,8), comment="#")
+    df.columns = ["CHROM","POS","ID","REF","ALT","QUAL","FILTER","INFO"]
 
     # remove scaffolds that the user wants to exclude
     if args.exclude_chrom:
