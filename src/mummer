@@ -12,16 +12,16 @@ if len(sys.argv) <= 1:
 if sys.argv[1] in ["-h", "--help", "getopt", "usage", "-help", "help"]:
 	sys.exit("""
 
---------------------------------------------------------------------------------
-all2vcf mummer
---------------------------------------------------------------------------------
+	--------------------------------------------------------------------------------
+	all2vcf mummer
+	--------------------------------------------------------------------------------
 
-USAGE:  all2vcf mummer [ options ]
+	USAGE:  all2vcf mummer [ options ]
 
-Convert Mummer SNP/indel output as produced by the 'show-snps -T' command to
-a pseudo-VCF format.
+	Convert Mummer SNP/indel output as produced by the 'show-snps -T' command to
+	a pseudo-VCF format.
 
-OPTIONS:
+	OPTIONS:
 
 	--snps			Mummer "snps" file from 'show-snps -T' 			[mandatory]
 	--reference		Reference genome FASTA file 				[mandatory]
@@ -30,7 +30,7 @@ OPTIONS:
 	--head-out		Add a newly-generated VCF header to the output 		[off]
 	--no-Ns			Exclude variants featuring Ns 				[off]
 
-""")
+	""")
 
 
 

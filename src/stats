@@ -1,0 +1,137 @@
+#!/usr/bin/env python3
+
+# modules
+import pandas as pd
+import sys
+import argparse as ap
+from time import asctime as at
+import os
+
+
+if len(sys.argv) <= 1:
+	sys.argv.append("-h")
+
+if sys.argv[1] in ["-h", "--help", "getopt", "usage", "-help", "help"]:
+	sys.exit('''
+
+	--------------------------------------------------------------------------------
+	all2vcf stats
+	--------------------------------------------------------------------------------
+
+	USAGE:  all2vcf stats [ options ]
+
+	Obtain statistics on the provided VCF files.
+
+	OPTIONS:
+
+	--vcf               Input VCF files to compute statistics on			[mandatory]
+	--exclude-chrom     SPACE-separated list of seq to be excluded			[off]
+	--basename          Prefix for output file(s)					[all2vcf.stats]
+	--output-dir        Output directory (if not existent, will be created)		[current]
+
+	''')
+
+
+# parser
+p = ap.ArgumentParser()
+p.add_argument("--vcf", nargs="+", required=True)
+p.add_argument("--exclude-chrom", nargs="*")
+p.add_argument("--basename", type=str, default="all2vcf.stats")
+p.add_argument("--output-dir", default=".")
+args = p.parse_args()
+
+
+# workspace
+os.makedirs(args.output_dir, exist_ok=True)
+
+# functions
+# define function to convert a "=" separated list
+# to a dictionary
+def convert_to_dictionary(lst):
+    dict = [ x.split("=") for x in lst ]
+    dict = { x[0]:x[1] for x in dict }
+    return dict
+
+# empty list of results
+Results = []
+
+# main code
+for input_file in args.vcf:
+
+    # initial message
+    sys.stderr.write(f"\n[{at()}] ### Working on {input_file} ### \n\n")
+
+    # read header
+    INPUT = open(input_file, "r")
+    Header = [ line for line in INPUT if line[0] == "#" ]
+    INPUT.close()
+
+    # read input file
+    df = pd.read_csv(input_file, sep="\t", header=None, comment="#")
+    df.columns = ["CHROM","POS","ID","REF","ALT","QUAL","FILTER","INFO","FORMAT","FNL"]
+
+    # remove scaffolds that the user wants to exclude
+    if args.exclude_chrom:
+        sys.stderr.write(f"[{at()}] Excluding {len(args.exclude_chrom)} sequences from --exclude-chrom ... ")
+
+        if len(args.exclude_chrom) > 0:
+
+            # remove lines from VCF file
+            # the pattern defines an OR condition with all the scaffolds to exclude
+            # the "contains" statement checks if the pattern is contained in the row
+            # the "~" sign inverts the boolean values (i.e. from True to False, and viceversa)
+            # the mask is then used to subset the dataframe
+            pattern = "|".join(args.exclude_chrom)
+            mask = df["CHROM"].str.contains(pattern)
+            excluded = df.loc[mask , :]
+            df = df.loc[~mask , :]
+
+            if len(Header) > 0:
+                # remove lines from header
+                # this command retains a line from the original header ...
+                # ... only if it does not contain any of the scaffolds to be excluded
+                # that means
+                # only if all the scaffolds to be excluded are NOT contained in it
+                Header = [ line for line in Header if all([ seqname in line for seqname in args.exclude_chrom ]) == False ]
+
+            # writing to output a file with excluded variantsprint(
+            outfile = args.output_dir + "/" + args.basename + "." + "excluded_SVs.tsv"
+            excluded.to_csv(outfile, sep="\t", header=True, index=False)
+            sys.stderr.write("DONE\n")
+            sys.stderr.write(f"[{at()}] Excluded {sum(mask)} SVs from the scaffolds declared in --exclude-chrom\n")
+            sys.stderr.write(f"[{at()}] These SVs have been written to {outfile}\n")
+
+    # extract relevant fields
+    # which are chromosome, position, id, and a few info (SV length and type)
+    sys.stderr.write(f"[{at()}] Extracting information on the retained SVs ... ")
+    stats = df.copy()
+    stats["INFO"] = stats["INFO"].str.split(";").apply(lambda x:convert_to_dictionary(x))
+    stats["SV_TYPE"] = stats["INFO"].str["SVTYPE"]
+    stats["SV_LEN"] = stats["INFO"].str["SVLEN"]
+    stats = stats.loc[: , ["CHROM", "POS", "SV_TYPE", "SV_LEN", "ALT"]]
+    sys.stderr.write("DONE\n")
+    sys.stderr.write(f"[{at()}] Extracted info on {stats.shape[0]} SVs \n")
+
+    # if SV type is breaklen (BND) we want the information on where does the other end go
+    # i.e. on which scaffold
+    # to do so, if the row contains "BND" as "SV_TYPE", we keep its alternative allele
+    # which indicates where it ends up
+    stats.loc[ stats["SV_TYPE"] != "BND" , ["ALT"] ] = "NA"
+    stats.loc[ stats["SV_TYPE"] == "BND" , ["SV_LEN"] ] = "NA"
+
+    # write to output this table
+    outfile = args.output_dir + "/" + args.basename + "." + "SV_info.tsv"
+    stats.to_csv(outfile, sep="\t", header=True, index=False)
+
+    # create summary
+    s = stats.groupby("SV_TYPE").count()["CHROM"]
+    s = s.rename(input_file)
+    Results.append(s)
+
+# process results
+df = pd.DataFrame(Results)
+
+# write to output
+outfile = args.output_dir + "/" + args.basename + "." + "SV_summary.tsv"
+df = df.reset_index()
+df.to_csv(outfile, sep="\t", header=True, index=False)

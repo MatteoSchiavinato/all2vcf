@@ -16,17 +16,17 @@ if len(sys.argv) <= 1:
 
 if sys.argv[1] in ["-h", "--help", "getopt", "usage", "-help", "help"]:
 	sys.exit('''
+	
+	--------------------------------------------------------------------------------
+	all2vcf isec
+	--------------------------------------------------------------------------------
 
---------------------------------------------------------------------------------
-all2vcf isec
---------------------------------------------------------------------------------
+	USAGE:  all2vcf isec [ options ]
 
-USAGE:  all2vcf isec [ options ]
+	Convert "sites.txt" file produced by bcftools isec into a VCF file.
+	The output VCF file is in VCF version 4.2
 
-Convert "sites.txt" file produced by bcftools isec into a VCF file.
-The output VCF file is in VCF version 4.2
-
-OPTIONS:
+	OPTIONS:
 
 	--sites             Input "sites.txt" file from bcftools isec               [mandatory]
 	--vcf               Input VCF files used in isec, IN THE SAME ORDER         [mandatory]
@@ -35,7 +35,7 @@ OPTIONS:
 	--basename          Prefix for output file(s)                               ["all2vcf_isec"]
 	--output-dir        Output directory (if not existent, will be created)     [current]
 
-''')
+	''')
 
 
 # parser
