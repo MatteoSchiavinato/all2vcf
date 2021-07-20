@@ -24,8 +24,9 @@ if sys.argv[1] in ["-h","--help","getopt","usage","help","-help"]:
     --------------------------------------------------------------------------------
 
 
-    isec          Convert the \"sites.txt\" output file of bcftools isec to VCF
-    mummer        Convert the result of \"show-snps -T\" to a psuedo-VCF file
+    isec            Convert the \"sites.txt\" output file of bcftools isec to VCF
+    mummer          Convert the result of \"show-snps -T\" to a psuedo-VCF file
+    stats           Count occurrences of variants inside the provided VCF files 
 
 
     """)
