@@ -44,6 +44,11 @@ all2vcf isec [OPTIONS]
 
 ```
 
+The output of this command is composed of multiple files:
+
+- `*.sites.vcf`: the conversion to VCF of the `sites.txt` file produced by `bcftools isec`
+- `*.from_<input_vcf_file>.vcf`: multiple files, each carrying the name of their corresponding input VCF file. These files contain the same variants found in `sites.txt` but taken from the original VCF file. You can check the sample-specific values in there, e.g. those contained in the `INFO` field.
+
 
 ##### all2vcf mummer
 
@@ -61,6 +66,8 @@ all2vcf mummer [OPTIONS]
 
 ```
 
+The output of this command is a VCF-formatted file containing the same information as in the input snps file.
+
 
 ##### all2vcf stats
 
@@ -76,3 +83,9 @@ all2vcf stats [OPTIONS]
 
 
 ```
+
+The output of this command is composed of multiple files:
+
+- `*.summary.tsv`: table summarizing the different types of variants found in the file and their number of occurrences. This is the main output of the utility.
+- `*.<input_vcf_file>.info.tsv`: quick information about the variants found in each of the input VCF file, represented in terms of sequence, position, variant type, reference allele, and alternative allele. Useful for downstream calculations.
+- `*.excluded.tsv`: pseudo-VCF file containing the variants that were found in the sequences passed with `--exclude-chrom`.

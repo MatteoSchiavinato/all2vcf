@@ -16,7 +16,7 @@ if len(sys.argv) <= 1:
 
 if sys.argv[1] in ["-h", "--help", "getopt", "usage", "-help", "help"]:
 	sys.exit('''
-	
+
 	--------------------------------------------------------------------------------
 	all2vcf isec
 	--------------------------------------------------------------------------------
@@ -264,7 +264,7 @@ for i in range(0, len(Vcf_files)):
     output_lines = [ "\t".join(lst) for lst in output_lines ]
     out = Header + output_lines
     #
-    output_file = args.output_dir + "/" + args.basename + "." + "sites" + "." + "from_" + vcf_name + ".tsv"
+    output_file = args.output_dir + "/" + args.basename + "." + "sites" + "." + "from_" + vcf_name + ".vcf"
     OUTPUT = open(output_file, "w")
     for line in out:
         OUTPUT.write(line + "\n")
