@@ -28,12 +28,12 @@ The output VCF file is in VCF version 4.2
 
 OPTIONS:
 
---sites             Input "sites.txt" file from bcftools isec               [mandatory]
---vcf               Input VCF files used in isec, IN THE SAME ORDER         [mandatory]
---vcf-names         Names of the input VCF files, IN THE SAME ORDER         [mandatory]
---reference         Reference FASTA file                                    [mandatory]
---basename          Prefix for output file(s)                               ["all2vcf_isec"]
---output-dir        Output directory (if not existent, will be created)     [current]
+	--sites             Input "sites.txt" file from bcftools isec               [mandatory]
+	--vcf               Input VCF files used in isec, IN THE SAME ORDER         [mandatory]
+	--vcf-names         Names of the input VCF files, IN THE SAME ORDER         [mandatory]
+	--reference         Reference FASTA file                                    [mandatory]
+	--basename          Prefix for output file(s)                               ["all2vcf_isec"]
+	--output-dir        Output directory (if not existent, will be created)     [current]
 
 ''')
 
@@ -300,6 +300,7 @@ df = df.reset_index(drop=True)
 df = df.drop("len_CHROMNAME", axis=1)
 
 for lst in df.values.tolist():
+    lst = [str(i) for i in lst]
     line = "\t".join(lst)
     Out.append(line)
 

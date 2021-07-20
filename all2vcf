@@ -9,28 +9,28 @@ interpreter="python3.8"
 if len(sys.argv) == 1:
     sys.argv.append("-h")
 
-if any([x in sys.argv for x in ["-h","--help","getopt","usage","help","-help"]]):
+if sys.argv[1] in ["-h","--help","getopt","usage","help","-help"]:
 
-    print("""
-
-    --------------------------------------------------------------------------------
-    all2vcf
-    Matteo Schiavinato
-    Core Facility Bioinformatics - University of Natural Resources and Life Sciences
-    Vienna, Austria
-    2021
-    --------------------------------------------------------------------------------
-    Toolkit to convert different variant calling formats into VCF / pseudo-VCF files
-    --------------------------------------------------------------------------------
-
-
-    isec          Convert the \"sites.txt\" output file of bcftools isec to VCF
-    mummer        Convert the result of \"show-snps -T\" to a psuedo-VCF file
-
-
-    """)
+	print("""
+	
+	--------------------------------------------------------------------------------
+	all2vcf
+	Matteo Schiavinato
+	Core Facility Bioinformatics - University of Natural Resources and Life Sciences
+	Vienna, Austria
+	2021
+	--------------------------------------------------------------------------------
+	Toolkit to convert different variant calling formats into VCF / pseudo-VCF files
+	--------------------------------------------------------------------------------
+	
+	
+	isec          Convert the \"sites.txt\" output file of bcftools isec to VCF
+	mummer        Convert the result of \"show-snps -T\" to a psuedo-VCF file
+	
+	
+	""")
 
 else:
     args = " ".join(sys.argv[1:])
-    PROGRAMDIR = "/".join(abspath(sys.argv[0]).split("/")[:-1])
+    PROGRAMDIR = os.path.dirname(os.path.realpath(__file__))
     os.system(f"{interpreter} {PROGRAMDIR}/src/{args}")
