@@ -24,11 +24,11 @@ if sys.argv[1] in ["-h", "--help", "getopt", "usage", "-help", "help"]:
 
 	OPTIONS:
 
-	--vcf               Input VCF files to compute statistics on			[mandatory]
-	--vcf-names         Names of the input VCF files, IN THE SAME ORDER         [mandatory]
-	--exclude-chrom     SPACE-separated list of seq to be excluded			[off]
-	--basename          Prefix for output file(s)					[all2vcf.stats]
-	--output-dir        Output directory (if not existent, will be created)		[current]
+	--vcf               Input VCF files to compute statistics on		[mandatory]
+	--vcf-names         Names of the input VCF files, IN THE SAME ORDER	[mandatory]
+	--exclude-chrom     SPACE-separated list of seq to be excluded		[off]
+	--basename          Prefix for output file(s)				[all2vcf.stats]
+	--output-dir        Output directory (created if non-existent)		[current]
 
 	''')
 
