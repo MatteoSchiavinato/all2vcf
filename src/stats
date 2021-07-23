@@ -68,6 +68,7 @@ def convert_to_dictionary(lst):
 
 # empty list of results
 Results = []
+Results_chrom = []
 
 # main code
 for input_file in args.vcf:
@@ -149,7 +150,10 @@ for input_file in args.vcf:
 	# create summary
 	s = stats.groupby("VAR_TYPE").count()["CHROM"]
 	s = s.rename(vcf_name)
+	s_chrom = stats.groupby(["CHROM", "VAR_TYPE"]).count()["POS"]
+	s_chrom = s_chrom.rename(vcf_name)
 	Results.append(s)
+	Results_chrom.append(s_chrom)
 
 # process results
 df = pd.concat(Results, join="outer", axis=1)
@@ -160,3 +164,13 @@ df = df.astype(int)
 outfile = args.output_dir + "/" + args.basename + ".summary.tsv"
 df = df.reset_index()
 df.to_csv(outfile, sep="\t", header=True, index=False)
+
+# process results by chromosome
+df_chrom = pd.concat(Results_chrom, join="outer", axis=1)
+df_chrom = df_chrom.fillna(0)
+df_chrom = df_chrom.astype(int)
+
+# write to output
+outfile = args.output_dir + "/" + args.basename + ".summary.by_chrom.tsv"
+df_chrom = df_chrom.reset_index()
+df_chrom.to_csv(outfile, sep="\t", header=True, index=False)
