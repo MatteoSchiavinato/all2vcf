@@ -123,6 +123,10 @@ def get_feature_stats(stats, gff_input):
 # empty list of results
 Results = []
 Results_chrom = []
+if args.gff:
+	Feat_results = {}
+	Feat_results_chrom = {}
+
 
 # main code
 for input_file in args.vcf:
@@ -206,7 +210,9 @@ for input_file in args.vcf:
 	if args.gff:
 		sys.stderr.write(f"[{at()}] Extracting variants contained in GFF features ... ")
 		Feature_stats = get_feature_stats(stats, args.gff)
-		for feat, feature_df in Feature_stats:
+		for tup in Feature_stats:
+			feat = tup[0]
+			feature_df = tup[1]
 			outfile = args.output_dir + "/gff/by_input_file/" + args.basename + "." + vcf_name + "." + feat + ".info.tsv"
 			feature_df.to_csv(outfile, sep="\t", header=True, index=False)
 		#
@@ -222,19 +228,21 @@ for input_file in args.vcf:
 
 	# create stats by feature if requested
 	if args.gff:
-		Feat_results = {}
-		Feat_results_chrom = {}
-		#
-		for (feat, stats_df) in Feature_stats:
-			Feat_results[feat] = []
-			Feat_results_chrom[feat] = []
+		for tup in Feature_stats:
+			feat = tup[0]
+			stats_df = tup[1]
 			# create summary
 			feat_s = stats_df.groupby("VAR_TYPE").count()["CHROM"]
 			feat_s = feat_s.rename(vcf_name + "_" + feat)
 			feat_s_chrom = stats_df.groupby(["CHROM", "VAR_TYPE"]).count()["POS"]
 			feat_s_chrom = feat_s_chrom.rename(vcf_name + "_" + feat)
-			Feat_results[feat].append(feat_s)
-			Feat_results_chrom[feat].append(feat_s_chrom)
+			try:
+				Feat_results[feat].append(feat_s)
+				Feat_results_chrom[feat].append(feat_s_chrom)
+			except KeyError:
+				Feat_results[feat] = [feat_s]
+				Feat_results_chrom[feat] = [feat_s_chrom]
+
 
 # process results
 df = pd.concat(Results, join="outer", axis=1)
