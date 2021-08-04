@@ -26,7 +26,7 @@ Once you've cloned it, you can navigate to the main directory of it and open the
 
 Then, substitute the interpreter at line 7 (currently `interpreter="python3.8"`) with your preferred python3 interpreter (e.g. `interpreter=python3.6.2`). This is what the program will try to call from your `$PATH`. If this interpreter is not in the `$PATH`, use the full path of the interpreter instead (e.g. `interpreter=/usr/bin/python3.6.2`).
 
-### Use
+### Conversion tools
 
 ##### all2vcf isec
 
@@ -67,6 +67,26 @@ all2vcf mummer [OPTIONS]
 ```
 
 The output of this command is a VCF-formatted file containing the same information as in the input snps file.
+
+
+### Statistic tools
+
+##### all2vcf density
+
+Count variants and variants per kbp from a VCF file.
+
+```
+--vcf               Input VCF file to compute density on                            [mandatory]
+--window-size       Size in bp for the window used for density calculation          [10000]
+--step-size         Step in bp between calculations                                 [5000]
+--regions           BED file with regions to include in the analysis                [off]
+--output-file       Path and name of the output file containing variant densities   [mandatory]
+
+```
+
+The output of this command is a single file containing 5 columns: `CHROM, W_START, W_END, NUM_VARS, VARS_KBP`. The `CHROM` indicates the chromosome to which the row corresponds. The `W_START` and `W_END` columns indicate the start and the end position of the window that each row represents. The positions are indicated in 1-based, closed intervals. The `NUM_VARS` column indicates how many variants have been found in each interval, while the `VARS_KBP` column indicates the density / kbp of these variants.
+
+Warning: depending on the chromosome naming, the output may not be sorted as you want it.
 
 
 ##### all2vcf stats
