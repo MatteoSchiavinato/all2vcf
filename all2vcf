@@ -15,18 +15,21 @@ if sys.argv[1] in ["-h","--help","getopt","usage","help","-help"]:
 
     --------------------------------------------------------------------------------
     all2vcf
-    v 0.3.0
+    v 0.4.0
     Matteo Schiavinato
     Core Facility Bioinformatics - University of Natural Resources and Life Sciences
     Vienna, Austria
     2021
     --------------------------------------------------------------------------------
-    Toolkit to convert different variant calling formats into VCF / pseudo-VCF files
+    Toolkit to convert and process different variant calling formats into VCF
     --------------------------------------------------------------------------------
 
-
+    [conversion]
     isec            Convert the \"sites.txt\" output file of bcftools isec to VCF
     mummer          Convert the result of \"show-snps -T\" to a psuedo-VCF file
+
+    [statistics]
+    density         Count variants and variants per kbp from a VCF file
     stats           Count occurrences of variants inside the provided VCF files
 
 

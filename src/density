@@ -1,0 +1,165 @@
+#!/usr/bin/env python3.8
+
+import argparse as ap
+from time import asctime as at
+import sys
+import os
+import pandas as pd
+
+
+if len(sys.argv) <= 1:
+	sys.argv.append("-h")
+
+if sys.argv[1] in ["-h", "--help", "getopt", "usage", "-help", "help"]:
+	sys.exit('''
+
+	--------------------------------------------------------------------------------
+	all2vcf density
+	--------------------------------------------------------------------------------
+
+	USAGE:  all2vcf density [ options ]
+
+	Count variants and variant densities from a VCF file
+
+	OPTIONS:
+
+	--vcf               Input VCF file to compute density on                            [mandatory]
+	--window-size       Size in bp for the window used for density calculation          [10000]
+	--step-size         Step in bp between calculations                                 [5000]
+	--regions           BED file with regions to include in the analysis                [off]
+	--output-file       Path and name of the output file containing variant densities   [mandatory]
+
+	''')
+
+
+# parser
+p = ap.ArgumentParser()
+p.add_argument("--vcf", required=True)
+p.add_argument("--window-size", default=1000, type=int)
+p.add_argument("--step-size", default=500, type=int)
+p.add_argument("--regions")
+p.add_argument("--output-file", required=True)
+args = p.parse_args()
+
+# -------------
+# read VCF file
+# get header
+# extract chromosome lengths
+
+sys.stderr.write("[{0}] Reading input file\n".format(at()))
+
+INPUT = open(args.vcf, "r")
+Header = [ line for line in INPUT if line[0] == "#" ]
+Chromosomes = [ line.split("<")[1].rstrip(">\b\r\n").split(",") for line in Header if "contig=" in line ]
+Chr_lengths = { x[0].split("=")[1]:int(x[1].split("=")[1]) for x in Chromosomes }
+INPUT.close()
+
+# ----------------
+# re-read VCF file
+# get variants as dataframe
+
+df = pd.read_csv(args.vcf, comment="#", sep="\t", usecols=range(0,8), header=None)
+df.columns = ["CHROM","POS","ID","REF","ALT","QUAL","FILTER","INFO"]
+
+# -------------------------
+# read BED file if declared
+# read as data frame
+# convert BED positions to normal (1-based) positions
+# retain only positions contained within this file regions
+
+if args.regions:
+
+	sys.stderr.write("[{0}] Filtering out VCF entries outside of {1}\n".format(at(), args.regions))
+
+	# function
+	def is_in_bed(chrom, pos, Bed):
+		if chrom in Bed.keys():
+			for interval in Bed[chrom]:
+				if interval[0] <= pos <= interval[1]:
+					return True
+					break
+			else:
+				return False
+		else:
+			return False
+
+	# read bed file
+	# create a dictionary with chromosomes as keys
+	# store ranges in 1-based closed format
+	# hence by doing a +1 on the start position
+	# which is a BED (0-based) as input
+	Bed = {}
+	INPUT = open(args.regions, "r")
+	Lines = [ line.rstrip("\n\r\b").split("\t") for line in INPUT ]
+	for lst in Lines:
+		try:
+			Bed[lst[0]].append((int(lst[1]) +1, int(lst[2])))
+		except KeyError:
+			Bed[lst[0]] = [(int(lst[1]) +1, int(lst[2]))]
+	INPUT.close()
+
+	# extract positions contained in BED file
+	# filter the remaining ones out
+	# return updated dataframe
+	Res = []
+	discarded = 0
+
+	for tup in df.itertuples():
+		index = tup[0]
+		chrom = tup[1]
+		pos = int(tup[2])
+		if is_in_bed(chrom, pos, Bed) == True:
+			Res.append(tup[1:])
+		else:
+			discarded += 1
+
+	df = pd.DataFrame(Res)
+	df.columns = ["CHROM","POS","ID","REF","ALT","QUAL","FILTER","INFO"]
+	sys.stderr.write("[{0}] Discarded {1} entries from the VCF file, not found in {2}\n".format(at(), discarded, args.regions))
+
+
+# ----------------------
+# read in sliding window
+# count variants per sliding window
+
+sys.stderr.write("[{0}] Counting variant abundance and density\n".format(at()))
+
+Vars_per_bp = []
+k = 0
+tot_len = sum([ Chr_lengths[chr] for chr in Chr_lengths.keys() ])
+
+for chr in Chr_lengths.keys():
+
+	# get chromosome length
+	chr_length = Chr_lengths[chr]
+
+	# define window start and end
+	w_start = 1
+	w_end = w_start + args.window_size - 1
+
+	# iterate over the chromosome until there is length to iterate from
+	while (w_start <= chr_length):
+
+		# get lines in window
+		mask = (df.CHROM == chr) & (df.POS >= w_start) & (df.POS <= w_end)
+		num_vars = df.loc[mask , :].shape[0]
+		vars_per_kbp = round(float((num_vars / args.window_size) * 1000), 2)
+
+		# store results
+		Vars_per_bp.append((chr, w_start, w_end, num_vars, vars_per_kbp))
+
+		# show progress
+		sys.stderr.write(f"Progress: {round(k / tot_len * 100, 4)} %\r")
+		k += args.step_size
+
+		# advance of 1 step
+		w_start  += args.step_size
+		w_end += args.step_size
+
+sys.stderr.write("\n[{0}] Completed\n".format(at()))
+
+# convert results of iteration to a dataframe
+sys.stderr.write("[{0}] Writing to output\n".format(at()))
+vars = pd.DataFrame(Vars_per_bp)
+vars.columns = ["CHROM", "W_START", "W_END", "NUM_VARS", "VARS_KBP"]
+vars.to_csv(args.output_file, sep="\t", header=True, index=False)
