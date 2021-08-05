@@ -149,7 +149,7 @@ for chr in Chr_lengths.keys():
 		Vars_per_bp.append((chr, w_start, w_end, num_vars, vars_per_kbp))
 
 		# show progress
-		sys.stderr.write(f"Progress: {round(k / tot_len * 100, 4)} %\r")
+		sys.stderr.write(f"Progress: {min(round(float(100.0000), 4), round(k / tot_len * 100, 4))} %\r")
 		k += args.step_size
 
 		# advance of 1 step
