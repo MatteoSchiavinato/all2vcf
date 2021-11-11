@@ -28,7 +28,7 @@ stats           Count occurrences of variants inside the provided VCF files
 
 ```
 
-### Install
+## Install
 
 Here's how to setup **all2vcf**. First make sure that the following **python3** packages are installed:
 
@@ -46,15 +46,15 @@ Then, clone this repository with:
 git clone https://github.com/MatteoSchiavinato/all2vcf.git
 ```
 
-##### If you need a specific python3 distribution to be used...
+### If you need a specific python3 distribution to be used...
 
 Once you've cloned it, you can navigate to the main directory of it and open the `all2vcf` executable with a text editor. Substitute the shebang sequence (currently `#!/usr/bin/env python3.8`) with your own python3 version (e.g. `#!/usr/bin/python3`).
 
 Then, substitute the interpreter at line 7 (currently `interpreter="python3.8"`) with your preferred python3 interpreter (e.g. `interpreter=python3.6.2`). This is what the program will try to call from your `$PATH`. If this interpreter is not in the `$PATH`, use the full path of the interpreter instead (e.g. `interpreter=/usr/bin/python3.6.2`).
 
-### Manipulation tools
+### Usage
 
-##### all2vcf filter_vcf
+#### all2vcf filter_vcf
 
 Filter variants in VCF format according to common metrics.
 
@@ -94,9 +94,7 @@ GATK field documentation: [see here](https://gatk.broadinstitute.org/hc/en-us/ar
 
 Each of these parameters works only if the corresponding field is found in the `INFO` field of the vcf file.
 
-### Conversion tools
-
-##### all2vcf isec
+#### all2vcf isec
 
 Convert the output of [bcftools isec](http://samtools.github.io/bcftools/bcftools.html) to VCF.
 
@@ -117,8 +115,7 @@ The output of this command is composed of multiple files:
 - `*.sites.vcf`: the conversion to VCF of the `sites.txt` file produced by `bcftools isec`
 - `*.from_<input_vcf_file>.vcf`: multiple files, each carrying the name of their corresponding input VCF file. These files contain the same variants found in `sites.txt` but taken from the original VCF file. You can check the sample-specific values in there, e.g. those contained in the `INFO` field.
 
-
-##### all2vcf mummer
+#### all2vcf mummer
 
 Convert the output of the **show-snps** tool from the [MUMmer](http://mummer.sourceforge.net/) toolkit to VCF. Note: **show-snps** must be used as `show-snps -T`.
 
@@ -136,10 +133,7 @@ all2vcf mummer [OPTIONS]
 
 The output of this command is a VCF-formatted file containing the same information as in the input snps file.
 
-
-### Statistic tools
-
-##### all2vcf density
+#### all2vcf density
 
 Count variants and variants per kbp from a VCF file.
 
@@ -156,8 +150,7 @@ The output of this command is a single file containing 5 columns: `CHROM, W_STAR
 
 Warning: depending on the chromosome naming, the output may not be sorted as you want it.
 
-
-##### all2vcf stats
+#### all2vcf stats
 
 Obtain statistics on the input VCF files. Statistics include (for the moment) only a counting of the occurrences of each type of variant (e.g. SNP, INDEL, BND, INV, ...).
 
