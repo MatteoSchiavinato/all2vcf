@@ -28,12 +28,12 @@ if sys.argv[1] in ["-h", "--help", "getopt", "usage", "-help", "help"]:
 
 	OPTIONS:
 
-	--sites             Input "sites.txt" file from bcftools isec               [mandatory]
-	--vcf               Input VCF files used in isec, IN THE SAME ORDER         [mandatory]
-	--vcf-names         Names of the input VCF files, IN THE SAME ORDER         [mandatory]
-	--reference         Reference FASTA file                                    [mandatory]
-	--basename          Prefix for output file(s)                               ["all2vcf_isec"]
-	--output-dir        Output directory (if not existent, will be created)     [current]
+	--sites             Input "sites.txt" file from bcftools isec				[mandatory]
+	--vcf               Input VCF files used in isec, IN THE SAME ORDER			[mandatory]
+	--vcf-names         Names of the input VCF files, IN THE SAME ORDER			[mandatory]
+	--reference         Reference FASTA file									[mandatory]
+	--basename          Prefix for output file(s)								["all2vcf_isec"]
+	--output-dir        Output directory (if not existent, will be created)		[current]
 
 	''')
 

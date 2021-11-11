@@ -24,14 +24,14 @@ if sys.argv[1] in ["-h", "--help", "getopt", "usage", "-help", "help"]:
 
 	OPTIONS:
 
-	--vcf               Input VCF files to compute statistics on		[mandatory]
-	--vcf-names         Names of the input VCF files, IN THE SAME ORDER	[mandatory]
-	--gff				GFF file to extract "gene" annotations from.	[off]
+	--vcf               Input VCF files to compute statistics on				[mandatory]
+	--vcf-names         Names of the input VCF files, IN THE SAME ORDER			[mandatory]
+	--gff				GFF file to extract "gene" annotations from.			[off]
 						A file will be created for each annotation
 						feature (e.g. "gene", "exon", ...)
-	--exclude-chrom     SPACE-separated list of seq to be excluded		[off]
-	--basename          Prefix for output file(s)				[all2vcf.stats]
-	--output-dir        Output directory (created if non-existent)		[current]
+	--exclude-chrom     SPACE-separated list of seq to be excluded				[off]
+	--basename          Prefix for output file(s)								[all2vcf.stats]
+	--output-dir        Output directory (created if non-existent)				[current]
 
 	''')
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.8
+#!/usr/bin/env python3
 
 import argparse as ap
 from time import asctime as at
@@ -23,11 +23,11 @@ if sys.argv[1] in ["-h", "--help", "getopt", "usage", "-help", "help"]:
 
 	OPTIONS:
 
-	--vcf               Input VCF file to compute density on                            [mandatory]
-	--window-size       Size in bp for the window used for density calculation          [10000]
-	--step-size         Step in bp between calculations                                 [5000]
-	--regions           BED file with regions to include in the analysis                [off]
-	--output-file       Path and name of the output file containing variant densities   [mandatory]
+	--vcf               Input VCF file to compute density on					[mandatory]
+	--window-size       Size in bp for the window used for density calculation	[10000]
+	--step-size         Step in bp between calculations							[5000]
+	--regions           BED file with regions to include in the analysis		[off]
+	--output-file       Path and name of output file with variant densities		[mandatory]
 
 	''')
 

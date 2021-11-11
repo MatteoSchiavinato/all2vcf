@@ -1,28 +1,32 @@
-#!/usr/bin/env python3.8
+#!/usr/bin/env python3
 
 import sys
 import os
 from os.path import abspath
 
-interpreter="python3.8"
+# change this if you want a different one
+interpreter="python3"
 
 if len(sys.argv) == 1:
     sys.argv.append("-h")
 
 if sys.argv[1] in ["-h","--help","getopt","usage","help","-help"]:
 
-    print("""
+    sys.stderr.write("""
 
     --------------------------------------------------------------------------------
     all2vcf
-    v 0.4.0
+    v 0.5.0
     Matteo Schiavinato
-    Core Facility Bioinformatics - University of Natural Resources and Life Sciences
-    Vienna, Austria
+    Barcelona Supercomputing Center (BSC-CNS)
+    Barcelona, Cataluña, Spain
     2021
     --------------------------------------------------------------------------------
-    Toolkit to convert and process different variant calling formats into VCF
+    Toolkit to convert and process different variant calling formats
     --------------------------------------------------------------------------------
+
+    [manipulation]
+    filter_vcf      Filter variants in a VCF file using common metrics
 
     [conversion]
     isec            Convert the \"sites.txt\" output file of bcftools isec to VCF
@@ -32,8 +36,8 @@ if sys.argv[1] in ["-h","--help","getopt","usage","help","-help"]:
     density         Count variants and variants per kbp from a VCF file
     stats           Count occurrences of variants inside the provided VCF files
 
-
     """)
+    sys.exit(0)
 
 else:
     args = " ".join(sys.argv[1:])

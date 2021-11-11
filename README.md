@@ -26,6 +26,48 @@ Once you've cloned it, you can navigate to the main directory of it and open the
 
 Then, substitute the interpreter at line 7 (currently `interpreter="python3.8"`) with your preferred python3 interpreter (e.g. `interpreter=python3.6.2`). This is what the program will try to call from your `$PATH`. If this interpreter is not in the `$PATH`, use the full path of the interpreter instead (e.g. `interpreter=/usr/bin/python3.6.2`).
 
+### Manipulation tools
+
+##### all2vcf filter_vcf
+
+Filter variants in VCF format according to common metrics.
+
+```
+all2vcf filter_vcf [OPTIONS]
+
+--input-file                VCF Format (not BCF)                                [stdin]
+--GATK                      Input file is from GATK                             [off]
+--output-file               Output filtered VCF file                            [stdout]
+--quality                   Minimum call quality (VCF field 6)                  [off]
+--qual-by-depth             Use the GATK QD field                               [off]
+                            (QUAL normalized by depth of coverage)        
+--avg-map-qual              Minimum average mapping quality                     [off]
+--alt-frac                  Min % of reads confirming alternative               [off]
+                            allele (0%-100%)        
+--min-depth                 Minimum coverage of the SNP (based on DP4)          [off]
+--max-depth                 ... and maximum                                     [off]
+--both-strands              Both strands have to fulfill -d/-D and -af          [off]
+                            (if on)        
+--min-read-per-strand       Both strands need to have at least <N>              [off]
+                            reads mapped        
+--fisher-score              Maximum accepted phred-score from                   [off]
+                            Fisher's exact test        
+--strand-bias-p-value       Maximum accepted strand bias p-value                [off]
+                            (phred-scaled!)        
+--var-dist-bias             Minimum accepted VDB score                          [off]
+--read-pos-bias             Minimum accepted RPB score                          [off]
+--map-qual-zero-frac        Max % of reads with mapping quality 0               [off]
+                            (0%-100%)        
+--map-qual-vs-strand-bias   Min value for Mann-Whitney U test of                [off]
+                            MQ and SB        
+--threads                   Number of threads                                   [1]
+```
+
+VCF format documentation: [see here](https://samtools.github.io/hts-specs/VCFv4.2.pdf)
+GATK field documentation: [see here](https://gatk.broadinstitute.org/hc/en-us/articles/360035531692-VCF-Variant-Call-Format)
+
+Each of these parameters works only if the corresponding field is found in the `INFO` field of the vcf file.
+
 ### Conversion tools
 
 ##### all2vcf isec
