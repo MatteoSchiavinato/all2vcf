@@ -2,6 +2,32 @@
 
 Convert common variant formats to VCF format
 
+```
+
+--------------------------------------------------------------------------------
+all2vcf
+v 0.5.0
+Matteo Schiavinato
+Barcelona Supercomputing Center (BSC-CNS)
+Barcelona, Cataluña, Spain
+2021
+--------------------------------------------------------------------------------
+Toolkit to convert and process different variant calling formats
+--------------------------------------------------------------------------------
+
+[manipulation]
+filter_vcf      Filter variants in a VCF file using common metrics
+
+[conversion]
+isec            Convert the \"sites.txt\" output file of bcftools isec to VCF
+mummer          Convert the result of \"show-snps -T\" to a psuedo-VCF file
+
+[statistics]
+density         Count variants and variants per kbp from a VCF file
+stats           Count occurrences of variants inside the provided VCF files
+
+```
+
 ### Install
 
 Here's how to setup **all2vcf**. First make sure that the following **python3** packages are installed:
