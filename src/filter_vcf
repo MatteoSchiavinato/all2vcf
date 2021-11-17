@@ -28,26 +28,29 @@ OPTIONS:
 --output-file               Output filtered VCF file                            [stdout]
 --quality                   Minimum call quality (VCF field 6)                  [off]
 --qual-by-depth             Use the GATK QD field                               [off]
-                            (QUAL normalized by depth of coverage)        
+                            (QUAL normalized by depth of coverage)
 --avg-map-qual              Minimum average mapping quality                     [off]
 --alt-frac                  Min % of reads confirming alternative               [off]
-                            allele (0%-100%)        
+                            allele (0%-100%)
 --min-depth                 Minimum coverage of the SNP (based on DP4)          [off]
 --max-depth                 ... and maximum                                     [off]
---both-strands              Both strands have to fulfill -d/-D and -af          [off]
-                            (if on)        
+--both-strands              Both strands have to fulfill --min-depth,           [off]
+                            --max-depth, and --alt-frac criteria
 --min-read-per-strand       Both strands need to have at least <N>              [off]
-                            reads mapped        
+                            reads mapped
 --fisher-score              Maximum accepted phred-score from                   [off]
-                            Fisher's exact test        
+                            Fisher's exact test
 --strand-bias-p-value       Maximum accepted strand bias p-value                [off]
-                            (phred-scaled!)        
+                            (phred-scaled!)
 --var-dist-bias             Minimum accepted VDB score                          [off]
 --read-pos-bias             Minimum accepted RPB score                          [off]
 --map-qual-zero-frac        Max % of reads with mapping quality 0               [off]
-                            (0%-100%)        
+                            (0%-100%)
 --map-qual-vs-strand-bias   Min value for Mann-Whitney U test of                [off]
-                            MQ and SB        
+                            MQ and SB
+--report                    Report file to be generated, containing the         [stderr]
+                            number of variants that were excluded, subdivided
+							by cause for exclusion
 --threads                   Number of threads                                   [1]
 
 """)
@@ -55,24 +58,25 @@ OPTIONS:
 
 # parser
 p = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, add_help=False)
-p.add_argument("-in", "--input-file")
+p.add_argument("--input-file")
 p.add_argument("--GATK", action="store_true")
-p.add_argument("-out", "--output-file")
-p.add_argument("-q", "--quality", default = 0, type=float)
+p.add_argument("--output-file")
+p.add_argument("--quality", default = 0, type=float)
 p.add_argument("--qual-by-depth", action="store_true")
-p.add_argument("-amq", "--avg-map-qual", type=int, default=0)
-p.add_argument("-af", "--alt-frac", default=0, type=float)
-p.add_argument("-d", "--min-depth", default = 0, type=int)
-p.add_argument("-D", "--max-depth", default = float('inf'), type=int)
+p.add_argument("--avg-map-qual", type=int, default=0)
+p.add_argument("--alt-frac", default=0, type=float)
+p.add_argument("--min-depth", default = 0, type=int)
+p.add_argument("--max-depth", default = float('inf'), type=int)
 p.add_argument("--both-strands", action="store_true")
 p.add_argument("--min-read-per-strand", default=0, type=int)
-p.add_argument("-fs", "--fisher-score", default=float('inf'))
-p.add_argument("-sp", "--strand-bias-p-value", default=float(0), type=float)
-p.add_argument("-vdb", "--var-dist-bias", default=float(0), type=float)
-p.add_argument("-rpb", "--read-pos-bias", default=float(0), type=float)
-p.add_argument("-mqzf", "--map-qual-zero-frac", default=float('inf'), type=float)
-p.add_argument("-mqsb", "----map-qual-vs-strand-bias", default=float(0), type=float)
-p.add_argument("-p", "--threads", type=int, default=1)
+p.add_argument("--fisher-score", default=float('inf'))
+p.add_argument("--strand-bias-p-value", default=float(0), type=float)
+p.add_argument("--var-dist-bias", default=float(0), type=float)
+p.add_argument("--read-pos-bias", default=float(0), type=float)
+p.add_argument("--map-qual-zero-frac", default=float('inf'), type=float)
+p.add_argument("--map-qual-vs-strand-bias", default=float(0), type=float)
+p.add_argument("--report", type=str)
+p.add_argument("--threads", type=int, default=1)
 args = p.parse_args()
 
 
@@ -363,9 +367,14 @@ for line in outlst:
 	except:
 		pass
 
-sys.stderr.write("Discarded variants per FAILED filter:\n")
+if args.report:
+	REPORT = open(f"{args.report}", "w")
+else:
+	REPORT = sys.stderr
+
+REPORT.write("Discarded variants per FAILED filter:\n")
 for key in Counters:
-	sys.stderr.write("{0}\t{1}\n".format(key, Counters[key]))
+	REPORT.write("{0}\t{1}\n".format(key, Counters[key]))
 
 
 if args.input_file:

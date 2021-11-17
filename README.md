@@ -6,7 +6,7 @@ Convert common variant formats to VCF format
 
 --------------------------------------------------------------------------------
 all2vcf
-v 0.5.0
+v 0.5.1
 Matteo Schiavinato
 Barcelona Supercomputing Center (BSC-CNS)
 Barcelona, Cataluña, Spain
