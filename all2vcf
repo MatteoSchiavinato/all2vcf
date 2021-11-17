@@ -16,7 +16,7 @@ if sys.argv[1] in ["-h","--help","getopt","usage","help","-help"]:
 
     --------------------------------------------------------------------------------
     all2vcf
-    v 0.5.1
+    v 0.5.2
     Matteo Schiavinato
     Barcelona Supercomputing Center (BSC-CNS)
     Barcelona, Cataluña, Spain

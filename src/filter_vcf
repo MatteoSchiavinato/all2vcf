@@ -30,8 +30,8 @@ OPTIONS:
 --qual-by-depth             Use the GATK QD field                               [off]
                             (QUAL normalized by depth of coverage)
 --avg-map-qual              Minimum average mapping quality                     [off]
---alt-frac                  Min % of reads confirming alternative               [off]
-                            allele (0%-100%)
+--alt-frac                  Min fraction of reads confirming alternative        [off]
+                            allele (range: 0.00-1.00)
 --min-depth                 Minimum coverage of the SNP (based on DP4)          [off]
 --max-depth                 ... and maximum                                     [off]
 --both-strands              Both strands have to fulfill --min-depth,           [off]
@@ -259,8 +259,8 @@ def altfrac(line, info, genotype, args, Counters):
 			alt_rev_cov = float(0)
 			for x in rev_cov[1:]:
 				alt_rev_cov += float(x)
-			if float((alt_for_cov / tot_for_cov)*100) >= float(args.alt_frac) and \
-			float((alt_rev_cov / tot_rev_cov)*100) >= float(args.alt_frac):
+			if float(alt_for_cov / tot_for_cov) >= float(args.alt_frac) and \
+			float(alt_rev_cov / tot_rev_cov) >= float(args.alt_frac):
 				return True
 			else:
 				Counters["alt_allele_fraction"] += 1
@@ -271,7 +271,7 @@ def altfrac(line, info, genotype, args, Counters):
 				alt_count += int(x)
 			ref_count = int(genotype["AD"].split(",")[0])
 			tot_count = ref_count + alt_count
-			if (float(alt_count) / float(tot_count))*100 >= float(args.alt_frac):
+			if float(alt_count) / float(tot_count) >= float(args.alt_frac):
 				return True
 			else:
 				Counters["alt_allele_fraction"] += 1
