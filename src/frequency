@@ -1,0 +1,78 @@
+#!/usr/bin/env python3
+
+# modules
+import sys
+import argparse as ap
+
+# help
+if len(sys.argv) <= 1:
+	sys.argv.append("-h")
+
+if sys.argv[1] in ["-h", "--help", "getopt", "usage", "-help", "help"]:
+	sys.stderr.write("""
+
+--------------------------------------------------------------------------------
+all2vcf frequency
+--------------------------------------------------------------------------------
+
+USAGE:  all2vcf frequency [ options ]
+
+Calculate allele frequencies for each variant using the AD and the DP field
+Requires "AD" annotated in the "INFO" field
+
+OPTIONS:
+--input-file                VCF Format (not BCF)                                [stdin]
+--output-file               Output VCF file with AF annotation in INFO          [stdout]
+
+""")
+	sys.exit(0)
+
+# parser
+p = ap.ArgumentParser()
+p.add_argument("--input-file")
+p.add_argument("--output-file")
+args = p.parse_args()
+
+# read header
+if args.input_file:
+    INPUT = open(args.input_file, "r")
+    Header = [ line for line in INPUT if line[0]=="#" ]
+    INPUT.close()
+else:
+    INPUT = sys.stdin
+    Header = [ line for line in INPUT if line[0]=="#" ]
+
+# read vcf lines
+if args.input_file:
+    INPUT = open(args.input_file, "r")
+    Lines = [ line.rstrip("\b\r\n").split("\t") for line in INPUT if line[0] != "#" ]
+    INPUT.close()
+else:
+    INPUT = sys.stdin
+    Lines = [ line.rstrip("\b\r\n").split("\t") for line in INPUT if line[0] != "#" ]
+
+# calculate AF
+if args.output_file:
+    OUTPUT = open(f"{args.output_file}", "w")
+else:
+    OUTPUT = sys.stdout
+
+for lst in Lines:
+    # split info field into a dictionary
+    info = {x.split("=")[0]:x.split("=")[1] for x in lst[7].split(";")}
+    # extract allele depth and total depth
+    ad = [ float(x) for x in info["AD"].split(",") ]
+    dp = sum(ad)
+    # compute allele frequencies
+    af = [ str(x/dp) for x in ad ]
+    af_gt = af[1:]
+    # create AF field
+    af = ",".join(af)
+    af_gt = ",".join(af_gt)
+    lst[7] = f"{lst[7]};AF={af}"
+    # add to genotype field too
+    lst[8] = f"{lst[8]}:AF"
+    lst[9] = f"{lst[9]}:{af_gt}"
+    # write to output
+    line = "\t".join(lst) + "\n"
+    OUTPUT.write(line)
