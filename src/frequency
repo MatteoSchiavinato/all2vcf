@@ -42,6 +42,12 @@ else:
     INPUT = sys.stdin
     Header = [ line for line in INPUT if line[0]=="#" ]
 
+# add header line for allele frequency
+af_line_info="##INFO=<ID=AF,Number=1,Type=Float,Description=\"Indicates the allele frequency of each annotated allele, incl. reference.\">\n"
+af_line_gt="##FORMAT=<ID=AF,Number=1,Type=Float,Description=\"Indicates the allele frequency of each annotated alternative allele.\">\n"
+header_last_line = Header[-1]
+Header = Header[:-1] + [af_line_info + af_line_gt + header_last_line]
+
 # read vcf lines
 if args.input_file:
     INPUT = open(args.input_file, "r")
@@ -56,6 +62,9 @@ if args.output_file:
     OUTPUT = open(f"{args.output_file}", "w")
 else:
     OUTPUT = sys.stdout
+
+for line in Header:
+	OUTPUT.write(line)
 
 for lst in Lines:
     # split info field into a dictionary
