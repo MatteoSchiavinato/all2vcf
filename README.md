@@ -8,15 +8,14 @@ Convert common variant formats to VCF format
 all2vcf
 v 0.5.1
 Matteo Schiavinato
-Barcelona Supercomputing Center (BSC-CNS)
-Barcelona, Cataluña, Spain
-2021
+2019-2021
 --------------------------------------------------------------------------------
 Toolkit to convert and process different variant calling formats
 --------------------------------------------------------------------------------
 
 [manipulation]
-filter_vcf      Filter variants in a VCF file using common metrics
+filter_vcf       Filter variants in a VCF file using common metrics
+frequency        Add allele frequency (AF) to INFO and FORMAT fields
 
 [conversion]
 isec            Convert the \"sites.txt\" output file of bcftools isec to VCF
@@ -59,33 +58,43 @@ Then, substitute the interpreter at line 7 (currently `interpreter="python3.8"`)
 Filter variants in VCF format according to common metrics.
 
 ```
-all2vcf filter_vcf [OPTIONS]
+--------------------------------------------------------------------------------
+all2vcf filter
+--------------------------------------------------------------------------------
 
+USAGE:  all2vcf filter [ options ]
+
+Filter variants contained in a VCF file based on common metrics
+
+OPTIONS:
 --input-file                VCF Format (not BCF)                                [stdin]
 --GATK                      Input file is from GATK                             [off]
 --output-file               Output filtered VCF file                            [stdout]
 --quality                   Minimum call quality (VCF field 6)                  [off]
 --qual-by-depth             Use the GATK QD field                               [off]
-                            (QUAL normalized by depth of coverage)        
+                            (QUAL normalized by depth of coverage)
 --avg-map-qual              Minimum average mapping quality                     [off]
---alt-frac                  Min % of reads confirming alternative               [off]
-                            allele (0%-100%)        
+--alt-frac                  Min fraction of reads confirming alternative        [off]
+                            allele (range: 0.00-1.00)
 --min-depth                 Minimum coverage of the SNP (based on DP4)          [off]
 --max-depth                 ... and maximum                                     [off]
---both-strands              Both strands have to fulfill -d/-D and -af          [off]
-                            (if on)        
+--both-strands              Both strands have to fulfill --min-depth,           [off]
+                            --max-depth, and --alt-frac criteria
 --min-read-per-strand       Both strands need to have at least <N>              [off]
-                            reads mapped        
+                            reads mapped
 --fisher-score              Maximum accepted phred-score from                   [off]
-                            Fisher's exact test        
+                            Fisher's exact test
 --strand-bias-p-value       Maximum accepted strand bias p-value                [off]
-                            (phred-scaled!)        
+                            (phred-scaled!)
 --var-dist-bias             Minimum accepted VDB score                          [off]
 --read-pos-bias             Minimum accepted RPB score                          [off]
 --map-qual-zero-frac        Max % of reads with mapping quality 0               [off]
-                            (0%-100%)        
+                            (0%-100%)
 --map-qual-vs-strand-bias   Min value for Mann-Whitney U test of                [off]
-                            MQ and SB        
+                            MQ and SB
+--report                    Report file to be generated, containing the         [stderr]
+                            number of variants that were excluded, subdivided
+							              by cause for exclusion
 --threads                   Number of threads                                   [1]
 ```
 
@@ -93,6 +102,25 @@ VCF format documentation: [see here](https://samtools.github.io/hts-specs/VCFv4.
 GATK field documentation: [see here](https://gatk.broadinstitute.org/hc/en-us/articles/360035531692-VCF-Variant-Call-Format)
 
 Each of these parameters works only if the corresponding field is found in the `INFO` field of the vcf file.
+
+#### all2vcf frequency
+
+Add the allele frequency specification inside the INFO and the FORMAT fields of the VCF file. Requires the presence of the AD field, which provides read counts per allele. 
+
+```
+--------------------------------------------------------------------------------
+all2vcf frequency
+--------------------------------------------------------------------------------
+
+USAGE:  all2vcf frequency [ options ]
+
+Calculate allele frequencies for each variant using the AD field
+Requires "AD" annotated in the "INFO" field
+
+OPTIONS:
+--input-file                VCF Format (not BCF)                                [stdin]
+--output-file               Output VCF file with AF annotation in INFO          [stdout]
+```
 
 #### all2vcf isec
 
