@@ -17,7 +17,7 @@ all2vcf frequency
 
 USAGE:  all2vcf frequency [ options ]
 
-Calculate allele frequencies for each variant using the AD and the DP field
+Calculate allele frequencies for each variant using the AD field
 Requires "AD" annotated in the "INFO" field
 
 OPTIONS:
