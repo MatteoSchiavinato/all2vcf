@@ -54,10 +54,10 @@ Filter variants in VCF format according to common metrics.
 
 ```
 --------------------------------------------------------------------------------
-all2vcf filter
+all2vcf filter_vcf
 --------------------------------------------------------------------------------
 
-USAGE:  all2vcf filter [ options ]
+USAGE:  all2vcf filter_vcf [ options ]
 
 Filter variants contained in a VCF file based on common metrics
 
@@ -89,7 +89,7 @@ OPTIONS:
                             MQ and SB
 --report                    Report file to be generated, containing the         [stderr]
                             number of variants that were excluded, subdivided
-							              by cause for exclusion
+                            by cause for exclusion
 --threads                   Number of threads                                   [1]
 ```
 
