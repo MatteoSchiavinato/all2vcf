@@ -4,15 +4,6 @@ Convert common variant formats to VCF format
 
 ```
 
---------------------------------------------------------------------------------
-all2vcf
-v 0.5.1
-Matteo Schiavinato
-2019-2021
---------------------------------------------------------------------------------
-Toolkit to convert and process different variant calling formats
---------------------------------------------------------------------------------
-
 [manipulation]
 filter_vcf       Filter variants in a VCF file using common metrics
 frequency        Add allele frequency (AF) to INFO and FORMAT fields
@@ -29,7 +20,7 @@ stats           Count occurrences of variants inside the provided VCF files
 
 ## Cite
 
-Unfortunately, we haven't published it yet. But one day, maybe, we will. For now, it would be a grand gesture if you could cite this github repository. Support open science! 
+Unfortunately, we haven't published it yet. But one day, maybe, we will. For now, it would be a grand gesture if you could cite this github repository. Support open science!
 
 ## Install
 
