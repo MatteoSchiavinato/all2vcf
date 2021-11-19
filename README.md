@@ -18,14 +18,18 @@ filter_vcf       Filter variants in a VCF file using common metrics
 frequency        Add allele frequency (AF) to INFO and FORMAT fields
 
 [conversion]
-isec            Convert the \"sites.txt\" output file of bcftools isec to VCF
-mummer          Convert the result of \"show-snps -T\" to a psuedo-VCF file
+isec            Convert the "sites.txt" output file of bcftools isec to VCF
+mummer          Convert the result of "show-snps -T" to a psuedo-VCF file
 
 [statistics]
 density         Count variants and variants per kbp from a VCF file
 stats           Count occurrences of variants inside the provided VCF files
 
 ```
+
+## Cite
+
+Unfortunately, we haven't published it yet. But one day, maybe, we will. For now, it would be a grand gesture if you could cite this github repository. Support open science! 
 
 ## Install
 
@@ -105,7 +109,7 @@ Each of these parameters works only if the corresponding field is found in the `
 
 #### all2vcf frequency
 
-Add the allele frequency specification inside the INFO and the FORMAT fields of the VCF file. Requires the presence of the AD field, which provides read counts per allele. 
+Add the allele frequency specification inside the INFO and the FORMAT fields of the VCF file. Requires the presence of the AD field, which provides read counts per allele.
 
 ```
 --------------------------------------------------------------------------------
