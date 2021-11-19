@@ -16,10 +16,8 @@ if sys.argv[1] in ["-h","--help","getopt","usage","help","-help"]:
 
     --------------------------------------------------------------------------------
     all2vcf
-    v 0.6.0
+    v 0.6.1
     Matteo Schiavinato
-    Barcelona Supercomputing Center (BSC-CNS)
-    Barcelona, Cataluña, Spain
     2021
     --------------------------------------------------------------------------------
     Toolkit to convert and process different variant calling formats

@@ -18,7 +18,7 @@ if sys.argv[1] in ["-h", "--help", "getopt", "usage", "-help", "help"]:
 all2vcf filter
 --------------------------------------------------------------------------------
 
-USAGE:  all2vcf filter [ options ]
+USAGE:  all2vcf filter_vcf [ options ]
 
 Filter variants contained in a VCF file based on common metrics
 
@@ -32,7 +32,7 @@ OPTIONS:
 --avg-map-qual              Minimum average mapping quality                     [off]
 --alt-frac                  Min fraction of reads confirming alternative        [off]
                             allele (range: 0.00-1.00)
---min-depth                 Minimum coverage of the SNP (based on DP4)          [off]
+--min-depth                 Minimum coverage of the SNP (based on AD)           [off]
 --max-depth                 ... and maximum                                     [off]
 --both-strands              Both strands have to fulfill --min-depth,           [off]
                             --max-depth, and --alt-frac criteria
@@ -141,15 +141,19 @@ def quality(line, lst, info, args, Counters):
 		return False
 
 def mapqual(line, info, args, Counters):
-	try:
-		if float(info["MQ"]) >= float(args.avg_map_qual):
-			return True
-		else:
+
+	if args.avg_map_qual != 0:
+		try:
+			if float(info["MQ"]) >= float(args.avg_map_qual):
+				return True
+			else:
+				Counters["mapping_quality"] += 1
+				return False
+		except:
 			Counters["mapping_quality"] += 1
 			return False
-	except:
-		Counters["mapping_quality"] += 1
-		return False
+	else:
+		return True
 
 def covdepth(line, info, genotype, args, Counters):
 	try:
