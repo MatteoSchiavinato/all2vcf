@@ -23,16 +23,16 @@ Requires either:
 - "AF" annotated in the "INFO" field but not in the FORMAT field
 
 OPTIONS:
---in                VCF Format (not BCF)                                        [stdin]
---out               Output VCF file with AF annotation in INFO                  [stdout]
+-i/--input-file         VCF Format (not BCF)                                    [stdin]
+-o/--output-file        Output VCF file with AF annotation in INFO              [stdout]
 
 """)
 	sys.exit(0)
 
 # parser
 p = ap.ArgumentParser()
-p.add_argument("--in")
-p.add_argument("--out")
+p.add_argument("-i", "--input-file")
+p.add_argument("-o", "--output-file")
 args = p.parse_args()
 
 

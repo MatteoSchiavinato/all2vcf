@@ -114,8 +114,8 @@ Requires either:
 - "AF" annotated in the "INFO" field but not in the FORMAT field
 
 OPTIONS:
---in                VCF Format (not BCF)                                        [stdin]
---out               Output VCF file with AF annotation in INFO                  [stdout]
+-i/--input-file         VCF Format (not BCF)                                    [stdin]
+-o/--output-file        Output VCF file with AF annotation in INFO              [stdout]
 ```
 
 #### all2vcf isec
