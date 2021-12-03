@@ -18,70 +18,125 @@ all2vcf frequency
 USAGE:  all2vcf frequency [ options ]
 
 Calculate allele frequencies for each variant using the AD field
-Requires "AD" annotated in the "INFO" field
+Requires either:
+- "AD" annotated in the "INFO" field
+- "AF" annotated in the "INFO" field but not in the FORMAT field
 
 OPTIONS:
---input-file                VCF Format (not BCF)                                [stdin]
---output-file               Output VCF file with AF annotation in INFO          [stdout]
+--in                VCF Format (not BCF)                                        [stdin]
+--out               Output VCF file with AF annotation in INFO                  [stdout]
 
 """)
 	sys.exit(0)
 
 # parser
 p = ap.ArgumentParser()
-p.add_argument("--input-file")
-p.add_argument("--output-file")
+p.add_argument("--in")
+p.add_argument("--out")
 args = p.parse_args()
 
-# read header
-if args.input_file:
-    INPUT = open(args.input_file, "r")
-    Header = [ line for line in INPUT if line[0]=="#" ]
-    INPUT.close()
-else:
-    INPUT = sys.stdin
-    Header = [ line for line in INPUT if line[0]=="#" ]
 
-# add header line for allele frequency
-af_line_info="##INFO=<ID=AF,Number=1,Type=Float,Description=\"Indicates the allele frequency of each annotated allele, incl. reference.\">\n"
-af_line_gt="##FORMAT=<ID=AF,Number=1,Type=Float,Description=\"Indicates the allele frequency of each annotated alternative allele.\">\n"
-header_last_line = Header[-1]
-Header = Header[:-1] + [af_line_info + af_line_gt + header_last_line]
+def add_allele_frequency(line):
 
-# read vcf lines
-if args.input_file:
-    INPUT = open(args.input_file, "r")
-    Lines = [ line.rstrip("\b\r\n").split("\t") for line in INPUT if line[0] != "#" ]
-    INPUT.close()
-else:
-    INPUT = sys.stdin
-    Lines = [ line.rstrip("\b\r\n").split("\t") for line in INPUT if line[0] != "#" ]
+	"""
+	v1
+	Author: Matteo Schiavinato
+	Date: 03/12/2021
+	Info: 	Reads a VCF line and tries to compute the AF field
+			adding it to both the INFO and the FORMAT fields
+			where missing
+	"""
 
-# calculate AF
-if args.output_file:
-    OUTPUT = open(f"{args.output_file}", "w")
-else:
-    OUTPUT = sys.stdout
+	lst = line.rstrip("\b\r\n").split("\t")
+	# split info field into a dictionary
+	info = {x.split("=")[0]:x.split("=")[1] for x in lst[7].split(";")}
+	# split GT field into a dictionary
+	gt = {}
+	for annotation, value in zip(lst[8].split(":"), lst[9].split(":")):
+		gt[annotation] = value
 
-for line in Header:
-	OUTPUT.write(line)
+	if "AF" in gt.keys():
+		# read allele frequency from genotype
+		af = gt["AF"].split(",")
+	else:
+		if "AF" in info.keys():
+			# try to see if INFO has AF
+			af = info["AF"].split(",")
+		else:
+			# try to compute it from allele depth
+			if "AD" in info.keys():
+				# extract allele depth and total depth
+				ad = [ float(x) for x in info["AD"].split(",") ]
+				dp = sum(ad)
+				# compute allele frequencies
+				af = [ str(x/dp) for x in ad ]
+			else:
+				sys.stderr.write("ERROR: couldn't find neither AD nor AF inside INFO\n")
+				sys.exit()
 
-for lst in Lines:
-    # split info field into a dictionary
-    info = {x.split("=")[0]:x.split("=")[1] for x in lst[7].split(";")}
-    # extract allele depth and total depth
-    ad = [ float(x) for x in info["AD"].split(",") ]
-    dp = sum(ad)
-    # compute allele frequencies
-    af = [ str(x/dp) for x in ad ]
-    af_gt = af[1:]
-    # create AF field
-    af = ",".join(af)
-    af_gt = ",".join(af_gt)
-    lst[7] = f"{lst[7]};AF={af}"
-    # add to genotype field too
-    lst[8] = f"{lst[8]}:AF"
-    lst[9] = f"{lst[9]}:{af_gt}"
-    # write to output
-    line = "\t".join(lst) + "\n"
-    OUTPUT.write(line)
+	# if AF contains also the REF allele frequency
+	# which means that there are more values here
+	# than in the ALT field (number 4 of the VCF, so index 3)
+	if len(af) == len(lst[3].split(","))+1:
+		# only consider allele frequencies from the 2nd on (1:)
+		af = af[1:]
+
+	# create AF field
+	# or substitute it with new values if existing
+	af = ",".join(af)
+	info["AF"] = af
+	# rejoin the info line
+	lst[7] = ";".join([ f"{x}={info[x]}" for x in info.keys() ])
+
+	# add to genotype field too
+	lst[8] = f"{lst[8]}:AF"
+	lst[9] = f"{lst[9]}:{af}"
+	# write to output
+	line = "\t".join(lst) + "\n"
+	# return
+	return line
+
+
+# main function
+def main():
+	# read header
+	if args.input_file:
+	    INPUT = open(args.input_file, "r")
+	    Header = [ line for line in INPUT if line[0]=="#" ]
+	    INPUT.close()
+	else:
+	    INPUT = sys.stdin
+	    Header = [ line for line in INPUT if line[0]=="#" ]
+
+	# add header line for allele frequency
+	af_line_info="##INFO=<ID=AF,Number=1,Type=Float,Description=\"Indicates the allele frequency of each annotated alternative allele.\">\n"
+	af_line_gt="##FORMAT=<ID=AF,Number=1,Type=Float,Description=\"Indicates the allele frequency of each annotated alternative allele.\">\n"
+	header_last_line = Header[-1]
+	Header = Header[:-1] + [af_line_info + af_line_gt + header_last_line]
+
+	# read vcf lines
+	if args.input_file:
+	    INPUT = open(args.input_file, "r")
+	    Lines = [ line for line in INPUT if line[0] != "#" ]
+	    INPUT.close()
+	else:
+	    INPUT = sys.stdin
+	    Lines = [ line for line in INPUT if line[0] != "#" ]
+
+	# calculate AF
+	if args.output_file:
+	    OUTPUT = open(f"{args.output_file}", "w")
+	else:
+	    OUTPUT = sys.stdout
+
+	for line in Header:
+		OUTPUT.write(line)
+
+	Output_lines = [ add_allele_frequency(line) for line in Lines ]
+
+	for line in Output_lines:
+	    OUTPUT.write(line)
+
+# main script
+if __name__ == "__main__":
+	main()

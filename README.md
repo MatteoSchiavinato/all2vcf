@@ -3,19 +3,17 @@
 Convert common variant formats to VCF format
 
 ```
-
 [manipulation]
-filter_vcf       Filter variants in a VCF file using common metrics
-frequency        Add allele frequency (AF) to INFO and FORMAT fields
+filter_vcf      Filter variants in a VCF file using common metrics
+frequency       Annotate allele frequency (AF) in the INFO and FORMAT field
 
 [conversion]
-isec            Convert the "sites.txt" output file of bcftools isec to VCF
-mummer          Convert the result of "show-snps -T" to a psuedo-VCF file
+isec            Convert the sites.txt output file of bcftools isec to VCF
+mummer          Convert the result of show-snps -T to a psuedo-VCF file
 
 [statistics]
 density         Count variants and variants per kbp from a VCF file
 stats           Count occurrences of variants inside the provided VCF files
-
 ```
 
 ## Cite
@@ -100,7 +98,8 @@ Each of these parameters works only if the corresponding field is found in the `
 
 #### all2vcf frequency
 
-Add the allele frequency specification inside the INFO and the FORMAT fields of the VCF file. Requires the presence of the AD field, which provides read counts per allele.
+Add the allele frequency specification inside the INFO and the FORMAT fields of the VCF file. The tool first checks if any AF is available in the FORMAT field. If not, if it is at least present in the INFO field. If not, it tries to compute it from the allele depth (AD) inside the INFO field. If this is also not present, it will not be able to compute it.
+
 
 ```
 --------------------------------------------------------------------------------
@@ -110,11 +109,13 @@ all2vcf frequency
 USAGE:  all2vcf frequency [ options ]
 
 Calculate allele frequencies for each variant using the AD field
-Requires "AD" annotated in the "INFO" field
+Requires either:
+- "AD" annotated in the "INFO" field
+- "AF" annotated in the "INFO" field but not in the FORMAT field
 
 OPTIONS:
---input-file                VCF Format (not BCF)                                [stdin]
---output-file               Output VCF file with AF annotation in INFO          [stdout]
+--in                VCF Format (not BCF)                                        [stdin]
+--out               Output VCF file with AF annotation in INFO                  [stdout]
 ```
 
 #### all2vcf isec

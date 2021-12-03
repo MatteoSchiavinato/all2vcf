@@ -16,7 +16,7 @@ if sys.argv[1] in ["-h","--help","getopt","usage","help","-help"]:
 
     --------------------------------------------------------------------------------
     all2vcf
-    v 0.6.1
+    v 0.7.0
     Matteo Schiavinato
     2021
     --------------------------------------------------------------------------------
@@ -25,11 +25,11 @@ if sys.argv[1] in ["-h","--help","getopt","usage","help","-help"]:
 
     [manipulation]
     filter_vcf      Filter variants in a VCF file using common metrics
-    frequency       Annotate allele frequency (AF)
+    frequency       Annotate allele frequency (AF) in the INFO and FORMAT field
 
     [conversion]
-    isec            Convert the \"sites.txt\" output file of bcftools isec to VCF
-    mummer          Convert the result of \"show-snps -T\" to a psuedo-VCF file
+    isec            Convert the sites.txt output file of bcftools isec to VCF
+    mummer          Convert the result of show-snps -T to a psuedo-VCF file
 
     [statistics]
     density         Count variants and variants per kbp from a VCF file
