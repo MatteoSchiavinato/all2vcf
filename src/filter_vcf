@@ -4,8 +4,7 @@
 import argparse
 import sys
 import itertools
-import multiprocessing as mp
-from multiprocessing.pool import ThreadPool
+from operator import itemgetter
 import time
 
 if len(sys.argv) <= 1:
@@ -28,30 +27,19 @@ OPTIONS:
 --output-file               Output filtered VCF file                            [stdout]
 --quality                   Minimum call quality (VCF field 6)                  [off]
 --qual-by-depth             Use the GATK QD field                               [off]
-                            (QUAL normalized by depth of coverage)
---avg-map-qual              Minimum average mapping quality                     [off]
---alt-frac                  Min fraction of reads confirming alternative        [off]
-                            allele (range: 0.00-1.00)
---min-depth                 Minimum coverage of the SNP (based on AD)           [off]
---max-depth                 ... and maximum                                     [off]
+--avg-map-qual              Min. average mapping quality (MQ)                   [off]
+--min-depth                 Min. variant coverage (AD)                          [off]
+--max-depth                 Max. variant coverage (AD)                          [off]
 --both-strands              Both strands have to fulfill --min-depth,           [off]
                             --max-depth, and --alt-frac criteria
 --min-read-per-strand       Both strands need to have at least <N>              [off]
                             reads mapped
---fisher-score              Maximum accepted phred-score from                   [off]
-                            Fisher's exact test
---strand-bias-p-value       Maximum accepted strand bias p-value                [off]
-                            (phred-scaled!)
---var-dist-bias             Minimum accepted VDB score                          [off]
---read-pos-bias             Minimum accepted RPB score                          [off]
---map-qual-zero-frac        Max % of reads with mapping quality 0               [off]
-                            (0%-100%)
---map-qual-vs-strand-bias   Min value for Mann-Whitney U test of                [off]
-                            MQ and SB
---report                    Report file to be generated, containing the         [stderr]
-                            number of variants that were excluded, subdivided
-							by cause for exclusion
---threads                   Number of threads                                   [1]
+--map-qual-zero-frac        Max. frac. reads with mapping quality 0 (MQ0F)      [off]
+--alt-frac                  Min. frac. reads confirming alt. allele (AF)        [off]
+--fisher-strand             Phred-scaled probability of strand bias (FS, SP)    [off]
+--var-dist-bias             Max. variant distance bias (VDB)                    [off]
+--read-pos-bias             Max. read position bias (RPB, absolute value)       [off]
+--map-qual-vs-strand-bias   Min. mapping quality strand bias (MQSB)             [off]
 
 """)
 	sys.exit(0)
@@ -61,327 +49,404 @@ p = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter
 p.add_argument("--input-file")
 p.add_argument("--GATK", action="store_true")
 p.add_argument("--output-file")
-p.add_argument("--quality", default = 0, type=float)
+p.add_argument("--quality", default=0, type=float)
 p.add_argument("--qual-by-depth", action="store_true")
-p.add_argument("--avg-map-qual", type=int, default=0)
-p.add_argument("--alt-frac", default=0, type=float)
-p.add_argument("--min-depth", default = 0, type=int)
-p.add_argument("--max-depth", default = float('inf'), type=int)
+p.add_argument("--avg-map-qual", default=0, type=int)
+p.add_argument("--min-depth", default=0, type=int)
+p.add_argument("--max-depth", default=float('inf'), type=int)
 p.add_argument("--both-strands", action="store_true")
 p.add_argument("--min-read-per-strand", default=0, type=int)
-p.add_argument("--fisher-score", default=float('inf'))
-p.add_argument("--strand-bias-p-value", default=float(0), type=float)
-p.add_argument("--var-dist-bias", default=float(0), type=float)
-p.add_argument("--read-pos-bias", default=float(0), type=float)
+p.add_argument("--alt-frac", default=0, type=float)
 p.add_argument("--map-qual-zero-frac", default=float('inf'), type=float)
+p.add_argument("--fisher-strand", default=float('inf'), type=float)
+p.add_argument("--var-dist-bias", default=float('inf'), type=float)
+p.add_argument("--read-pos-bias", default=float('inf'), type=float)
 p.add_argument("--map-qual-vs-strand-bias", default=float(0), type=float)
-p.add_argument("--report", type=str)
-p.add_argument("--threads", type=int, default=1)
 args = p.parse_args()
-
-
-### read input VCF file, print filtered header, do filtering
-
-if args.input_file:
-	INPUT = open(args.input_file, "r")
-else:
-	INPUT = sys.stdin
-
-if args.output_file:
-	OUTPUT = open(args.output_file, "w")
-else:
-	OUTPUT = sys.stdout
-
-if args.min_read_per_strand and args.both_strands:
-	sys.exit('''
-
-ERROR: --min-read-per-strand and --both-strands are mutually exclusive. Please pick only one of them.
-
-''')
-
-
-### multithreading options ###
-
-pool = ThreadPool(processes=int(args.threads))
-#queue = mp.Queue()
-
-
-### counters ###
-
-Counters = {
-"quality":0,
-"mapping_quality":0,
-"coverage_depth":0,
-"minimum_read_per_strand":0,
-"mapping_quality_zero_fraction":0,
-"alt_allele_fraction":0,
-"fisher_score":0,
-"var_dist_bias":0,
-"read_pos_bias":0,
-"strand_bias_p_value":0
-}
 
 
 ### functions ###
 
-def quality(line, lst, info, args, Counters):
-	try:
-		if args.qual_by_depth:
-			quality = info["QD"]
-		else:
-			quality = lst[5]
-		#
-		if float(quality) >= float(args.quality):
-			return True
-		else:
-			Counters["quality"] += 1
-			return False
-	except:
-		Counters["quality"] += 1
-		return False
+def quality(line, lst, info, args):
 
-def mapqual(line, info, args, Counters):
+	if args.quality > 0:
+		try:
+			if args.qual_by_depth:
+				quality = info["QD"]
+			else:
+				quality = lst[5]
+			#
+			if float(quality) >= float(args.quality):
+				return True
+			else:
+				return "Variant_quality"
+		except:
+			sys.stderr.write(f"ERROR: your VCF file seems to be missing the QUAL value in the 6th column\n")
+			sys.exit()
 
-	if args.avg_map_qual != 0:
+	else:
+		return True
+
+
+def mapqual(line, info, args):
+
+	if args.avg_map_qual > 0:
 		try:
 			if float(info["MQ"]) >= float(args.avg_map_qual):
 				return True
 			else:
-				Counters["mapping_quality"] += 1
-				return False
-		except:
-			Counters["mapping_quality"] += 1
-			return False
+				return "Avg_mapping_quality"
+
+		except ValueError:
+			return "Avg_mapping_quality"
+
+		except KeyError:
+			sys.stderr.write(f"ERROR: your VCF file is missing the MQ annotation in the INFO field\n")
+			sys.exit()
+
 	else:
 		return True
 
-def covdepth(line, info, genotype, args, Counters):
-	try:
-		if (args.both_strands) or (args.min_read_per_strand):
-			try:
-				if args.GATK:
-					split_cov = genotype["SAC"].split(",")
-				else:
-					split_cov = info["DP4"].split(",")
-				#
-				for_cov = [split_cov[i] for i in range(0,len(split_cov)) if i%2==0]
-				rev_cov = [split_cov[i] for i in range(0,len(split_cov)) if i%2==1]
-			except KeyError:
-				try:
-					for_cov = info["ADF"].split(",")
-					rev_cov = info["ADR"].split(",")
-				except KeyError:
-					Counters["coverage_depth"] += 1
-					sys.stderr.write("ERROR: The --both-strands option is not applicable\n")
-					sys.stderr.write("Your VCF file doesn't contain SAC, DP4 or ADF/ADR\n\n")
-					return False
-			tot_for_cov = float(0)
-			for x in for_cov:
-				tot_for_cov += float(x)
-			tot_rev_cov = float(0)
-			for x in rev_cov:
-				tot_rev_cov += float(x)
-			# when --both-strands
-			if args.both_strands:
-				if float(args.min_depth) <= float(tot_for_cov) <= float(args.max_depth) and \
-				float(args.min_depth) <= float(tot_rev_cov) <= float(args.max_depth):
-					return True
-				else:
-					Counters["coverage_depth"] += 1
-					return False
-			# when --min-read-per-strand
-			elif args.min_read_per_strand:
-				if float(tot_for_cov) >= float(args.min_read_per_strand) and \
-				float(tot_rev_cov) >= float(args.min_read_per_strand):
-					return True
-				else:
-					Counters["minimum_read_per_strand"] += 1
-					return False
-		#
-		else:
-			if float(args.min_depth) <= float(info["DP"]) <= float(args.max_depth):
-				return True
-			else:
-				Counters["coverage_depth"] += 1
-				return False
-	except:
-		Counters["coverage_depth"] += 1
-		return False
 
-def mqzf(line, info, genotype, args, Counters):
-	try:
-		if (args.GATK) and (info["VariantType"] == "SNP"):
-			try:
-				mqzf = (float(info["MQ0"])/float(info["DP"]))*100
-			except KeyError:
+def covdepth(line, info, genotype, args):
+
+	if (args.min_depth > 0) or (args.max_depth < float('inf')):
+		try:
+			if (args.both_strands) or (args.min_read_per_strand):
 				try:
-					mqzf = float(info["MQ0F"])*100
+					if args.GATK:
+						split_cov = genotype["SAC"].split(",")
+					else:
+						split_cov = info["DP4"].split(",")
+					#
+					for_cov = [split_cov[i] for i in range(0,len(split_cov)) if i%2==0]
+					rev_cov = [split_cov[i] for i in range(0,len(split_cov)) if i%2==1]
 				except KeyError:
-					sys.stderr.write("ERROR: The -mqzf option is not applicable\n")
-					sys.stderr.write("Your VCF file doesn't contain MQ0 or MQ0F in the INFO field\n\n")
-		else:
-			mqzf = float(info["MQ0F"])*100
+					try:
+						for_cov = info["ADF"].split(",")
+						rev_cov = info["ADR"].split(",")
+
+					except KeyError:
+						sys.stderr.write("ERROR: The --both-strands option is not applicable\n")
+						sys.stderr.write("Your VCF file doesn't contain SAC, DP4 or ADF/ADR\n\n")
+						sys.exit()
+
+				tot_for_cov = float(0)
+				for x in for_cov:
+					tot_for_cov += float(x)
+				tot_rev_cov = float(0)
+				for x in rev_cov:
+					tot_rev_cov += float(x)
+
+				# when --both-strands
+				if args.both_strands:
+					if float(args.min_depth) <= float(tot_for_cov) <= float(args.max_depth) and \
+					float(args.min_depth) <= float(tot_rev_cov) <= float(args.max_depth):
+						return True
+
+					else:
+						return "Coverage_depth"
+
+				# when --min-read-per-strand
+				elif args.min_read_per_strand:
+					if float(tot_for_cov) >= float(args.min_read_per_strand) and \
+					float(tot_rev_cov) >= float(args.min_read_per_strand):
+						return True
+
+					else:
+						return "Coverage_depth"
 			#
-		if float(mqzf) <= float(args.map_qual_zero_frac):
-			return True
-		else:
-			Counters["mapping_quality_zero_fraction"] += 1
-			return False
-	except:
-		Counters["mapping_quality_zero_fraction"] += 1
-		return False
-
-def altfrac(line, info, genotype, args, Counters):
-	try:
-		if args.both_strands:
-			try:
-				if args.GATK:
-					split_cov = genotype["SAC"].split(",")
+			else:
+				if float(args.min_depth) <= float(info["DP"]) <= float(args.max_depth):
+					return True
 				else:
-					split_cov = info["DP4"].split(",")
-				#
-				for_cov = [split_cov[i] for i in range(0,len(split_cov)) if i%2==0]
-				rev_cov = [split_cov[i] for i in range(0,len(split_cov)) if i%2==1]
-			except KeyError:
+					return "Coverage_depth"
+
+		except:
+			sys.stderr.write(f"ERROR: There was an error parsing DP/DP4/ADF/ADR/SAC information from your VCF file \n")
+			sys.exit()
+
+	else:
+		return True
+
+
+def mqzf(line, info, genotype, args):
+
+	if args.map_qual_zero_frac < float('inf'):
+		try:
+			if (args.GATK) and (info["VariantType"] == "SNP"):
 				try:
-					for_cov = info["ADF"].split(",")
-					rev_cov = info["ADR"].split(",")
+					mqzf = float(info["MQ0"])/float(info["DP"])
 				except KeyError:
-					sys.stderr.write("ERROR: The --both-strands option is not applicable\n")
-					sys.stderr.write("Your VCF file doesn't contain DP4 or ADF/ADR\n\n")
-					Counters["alt_allele_fraction"] += 1
-					return False
-			tot_for_cov = float(0)
-			for x in for_cov:
-				tot_for_cov += float(x)
-			tot_rev_cov = float(0)
-			for x in rev_cov:
-				tot_rev_cov += float(x)
-			alt_for_cov = float(0)
-			for x in for_cov[1:]:
-				alt_for_cov += float(x)
-			alt_rev_cov = float(0)
-			for x in rev_cov[1:]:
-				alt_rev_cov += float(x)
-			if float(alt_for_cov / tot_for_cov) >= float(args.alt_frac) and \
-			float(alt_rev_cov / tot_rev_cov) >= float(args.alt_frac):
+					try:
+						mqzf = float(info["MQ0F"])
+					except KeyError:
+						sys.stderr.write("ERROR: The -mqzf option is not applicable\n")
+						sys.stderr.write("Your VCF file doesn't contain MQ0 or MQ0F in the INFO field\n\n")
+			else:
+				mqzf = float(info["MQ0F"])
+				#
+			if float(mqzf) <= float(args.map_qual_zero_frac):
 				return True
 			else:
-				Counters["alt_allele_fraction"] += 1
-				return False
-		else:
-			alt_count = 0
-			for x in genotype["AD"].split(",")[1:]:
-				alt_count += int(x)
-			ref_count = int(genotype["AD"].split(",")[0])
-			tot_count = ref_count + alt_count
-			if float(alt_count) / float(tot_count) >= float(args.alt_frac):
+				return "Mapping_quality_zero_fraction"
+
+		except:
+			sys.stderr.write(f"ERROR: There was an error parsing MQ0F information from your VCF file \n")
+			sys.exit()
+
+	else:
+		return True
+
+
+def altfrac(line, info, genotype, args):
+
+	if args.alt_frac > 0:
+		try:
+			if args.both_strands:
+				try:
+					if args.GATK:
+						split_cov = genotype["SAC"].split(",")
+					else:
+						split_cov = info["DP4"].split(",")
+					#
+					for_cov = [split_cov[i] for i in range(0,len(split_cov)) if i%2==0]
+					rev_cov = [split_cov[i] for i in range(0,len(split_cov)) if i%2==1]
+				except KeyError:
+					try:
+						for_cov = info["ADF"].split(",")
+						rev_cov = info["ADR"].split(",")
+					except KeyError:
+						sys.stderr.write("ERROR: The --both-strands option is not applicable\n")
+						sys.stderr.write("Your VCF file doesn't contain DP4 or ADF/ADR\n\n")
+						sys.exit()
+
+				tot_for_cov = float(0)
+				for x in for_cov:
+					tot_for_cov += float(x)
+				tot_rev_cov = float(0)
+				for x in rev_cov:
+					tot_rev_cov += float(x)
+				alt_for_cov = float(0)
+				for x in for_cov[1:]:
+					alt_for_cov += float(x)
+				alt_rev_cov = float(0)
+				for x in rev_cov[1:]:
+					alt_rev_cov += float(x)
+				if float(alt_for_cov / tot_for_cov) >= float(args.alt_frac) and \
+				float(alt_rev_cov / tot_rev_cov) >= float(args.alt_frac):
+					return True
+				else:
+					return "Alternative_allele_fraction"
+			else:
+				alt_count = 0
+				for x in genotype["AD"].split(",")[1:]:
+					alt_count += int(x)
+				ref_count = int(genotype["AD"].split(",")[0])
+				tot_count = ref_count + alt_count
+				if float(alt_count) / float(tot_count) >= float(args.alt_frac):
+					return True
+				else:
+					return "Alternative_allele_fraction"
+
+		except:
+			sys.stderr.write(f"ERROR: There was an error parsing AD/ADF/ADR/DP4/SAC information from your VCF file \n")
+			sys.exit()
+
+	else:
+		return True
+
+
+def fisher_strand(line, info, genotype, args):
+
+	if args.fisher_strand < float('inf'):
+		try:
+			if float(info["FS"]) <= float(args.fisher_strand):
 				return True
 			else:
-				Counters["alt_allele_fraction"] += 1
-				return False
-	except:
-		Counters["alt_allele_fraction"] += 1
-		return False
+				return "Strand_bias"
 
-def fisher_score(line, info, args, Counters):
-	try:
-		if float(info["FS"]) <= float(args.fisher_score):
-			return True
-		else:
-			Counters["fisher_score"] += 1
-			return False
-	except KeyError:
+		except KeyError:
+			try:
+				if float(genotype["SP"]) <= float(args.fisher_strand):
+					return True
+				else:
+					return "Strand_bias"
+
+			except KeyError:
+				sys.stderr.write(f"ERROR: There was an error parsing FS/SP information from your VCF file \n")
+				sys.exit()
+	else:
 		return True
 
-def var_dist_bias(line, info, args, Counters):
-	try:
-		if float(info["VDB"]) >= float(args.var_dist_bias):
-			return True
-		else:
-			return False
-			Counters["var_dist_bias"] += 1
-	except KeyError:
-		return True
 
-def read_pos_bias(line, info, args, Counters):
-	try:
-		if float(info["RPB"]) >= float(args.read_pos_bias):
-			return True
-		else:
-			return False
-			Counters["read_pos_bias"] += 1
-	except KeyError:
-		return True
+def var_dist_bias(line, info, args):
 
-def map_qual_vs_strand_bias(line, info, args, Counters):
-	try:
-		if float(info["MQSB"]) >= float(args.map_qual_vs_strand_bias):
-			return True
-		else:
-			return False
-	except KeyError:
-		return True
-
-def strand_bias_p_value(line, genotype, args, Counters):
-	try:
-		if float(genotype["SP"]) <= float(args.strand_bias_p_value):
-			return True
-		else:
-			Counters["strand_bias_p_value"] += 1
-			return False
-	except KeyError:
-		return True
-
-def var_filter(line, args, Counters):
-	try:
-		if line[0:1] == "#":
-			return line
-		else:
-			lst = line.rstrip("\n\r\b").split("\t")
-			info = { str(x.split("=")[0]):str(x.split("=")[1]) for x in lst[7].split(";") if "=" in x }
-			gt_key = lst[8].split(":")
-			gt_value = lst[9].split(":")
-			genotype = { gt_key[i]:gt_value[i] for i in range(0, len(gt_key)) }
-			if \
-			quality(line, lst, info, args, Counters) == True \
-			and mapqual(line, info, args, Counters) == True \
-			and covdepth(line, info, genotype, args, Counters) == True \
-			and mqzf(line, info, genotype, args, Counters) == True \
-			and fisher_score(line, info, args, Counters) == True \
-			and altfrac(line, info, genotype, args, Counters) == True \
-			and var_dist_bias(line, info, args, Counters) == True \
-			and read_pos_bias(line, info, args, Counters) == True \
-			and map_qual_vs_strand_bias(line, info, args, Counters) == True \
-			and strand_bias_p_value(line, genotype, args, Counters) == True \
-			:
-				return line
+	if args.var_dist_bias < float('inf'):
+		try:
+			if float(info["VDB"]) >= float(args.var_dist_bias):
+				return True
 			else:
-				pass
-	except:
-		sys.stderr.write("ERROR: variant filtering step failed. Line:\n{0}\n".format(line))
+				return "Variant_distance_bias"
+
+		except KeyError:
+			sys.stderr.write(f"ERROR: There was an error parsing VDB information from your VCF file \n")
+			sys.exit()
+
+	else:
+		return True
+
+
+def read_pos_bias(line, info, args):
+
+	if args.read_pos_bias < float('inf'):
+		try:
+			if abs(float(info["RPB"])) >= float(args.read_pos_bias):
+				return True
+			else:
+				return "Read_position_bias"
+
+		except KeyError:
+			sys.stderr.write(f"ERROR: There was an error parsing RPB information from your VCF file \n")
+			sys.exit()
+
+	else:
+		return True
+
+
+def map_qual_vs_strand_bias(line, info, args):
+
+	if args.map_qual_vs_strand_bias > 0:
+		try:
+			if float(info["MQSB"]) >= float(args.map_qual_vs_strand_bias):
+				return True
+			else:
+				return "Mapping_quality_vs_strand_bias"
+
+		except KeyError:
+			sys.stderr.write(f"ERROR: There was an error parsing MQSB information from your VCF file \n")
+			sys.exit()
+
+	else:
+		return True
+
+
+def var_filter(line, args):
+
+	"""
+	Function checking filters for a variant, can be parallelized
+	25/02/2022
+	"""
+
+	lst = line.rstrip("\n\r\b").split("\t")
+	info = { str(x.split("=")[0]):str(x.split("=")[1]) for x in lst[7].split(";") if "=" in x }
+	gt_key = lst[8].split(":")
+	gt_value = lst[9].split(":")
+	genotype = { gt_key[i]:gt_value[i] for i in range(0, len(gt_key)) }
+
+	res = [	quality(line, lst, info, args),
+			mapqual(line, info, args),
+			covdepth(line, info, genotype, args),
+			mqzf(line, info, genotype, args),
+			fisher_strand(line, info, genotype, args),
+			altfrac(line, info, genotype, args),
+			var_dist_bias(line, info, args),
+			read_pos_bias(line, info, args),
+			map_qual_vs_strand_bias(line, info, args) ]
+
+	if all([x==True for x in res]):
+		var_pass = True
+	else:
+		var_pass = False
+
+	rej_reason = [ x for x in res if x != True ]
+
+	return (line, var_pass, rej_reason)
+
+
+def generate_counters(rejections):
+
+	"""
+	Generate dictionary with number of rejections per type of rejection
+	25/02/2022
+	"""
+
+	Keys = list(set([key for lst in rejections for key in lst]))
+
+	Counters = { key : 0 for key in Keys }
+	for lst in rejections:
+		for item in lst:
+			Counters[item] += 1
+
+	return Counters
+
 
 ### process lines ###
 
-outlst = [pool.apply(var_filter, args=(line, args, Counters)) for line in INPUT]
+if __name__ == "__main__":
 
-for line in outlst:
-	try:
+	### read input VCF file, print filtered header, do filtering
+
+	if args.input_file:
+		INPUT = open(args.input_file, "r")
+	else:
+		INPUT = sys.stdin
+
+	if args.output_file:
+		OUTPUT = open(args.output_file, "w")
+	else:
+		OUTPUT = sys.stdout
+
+	if args.min_read_per_strand and args.both_strands:
+		sys.stderr.write("ERROR: --min-read-per-strand and --both-strands are mutually exclusive. Please pick only one of them.\n")
+		sys.exit()
+
+	k = 0
+
+	# read input lines
+	All_lines = [line for line in INPUT]
+	Header = [line for line in All_lines if line[0]=="#"]
+	Lines = [line for line in All_lines if line[0]!="#"]
+	tot_variants = len(Lines)
+
+	if args.input_file:
+		INPUT.close()
+
+	res = []
+	for line in Lines:
+		res.append(var_filter(line, args))
+
+	# dump results
+	outlst = [x[0] for x in res if x[1]==True]
+	rejections = [x[2] for x in res if x[1] == False]
+	tot_pass = len(outlst)
+	tot_rej = len(rejections)
+	sys.stderr.write("---------------\nGeneral metrics\n---------------\n")
+	sys.stderr.write(f"PASS: {tot_pass}\n")
+	sys.stderr.write(f"FAIL: {tot_rej}\n")
+	sys.stderr.write("\n")
+
+	# write header to output
+	for line in Header:
 		OUTPUT.write(line)
-	except:
-		pass
 
-if args.report:
-	REPORT = open(f"{args.report}", "w")
-else:
-	REPORT = sys.stderr
+	# write kept lines to output
+	for line in outlst:
+		try:
+			OUTPUT.write(line)
+		except:
+			pass
 
-REPORT.write("Discarded variants per FAILED filter:\n")
-for key in Counters:
-	REPORT.write("{0}\t{1}\n".format(key, Counters[key]))
+	if args.output_file:
+		OUTPUT.close()
 
+	# write number of variants excluded
+	Counters = generate_counters(rejections)
 
-if args.input_file:
-	INPUT.close()
-if args.output_file:
-	OUTPUT.close()
+	if len(Counters.keys()) > 0:
+		sys.stderr.write("------------------------------------\nDiscarded variants per FAILED filter\n------------------------------------\n")
+		for key in Counters:
+			sys.stderr.write(f"{key}\t{Counters[key]}\n")
+
+	else:
+		sys.stderr.write("Discarded variants per FAILED filter: None\n")
