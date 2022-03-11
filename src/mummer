@@ -23,12 +23,12 @@ if sys.argv[1] in ["-h", "--help", "getopt", "usage", "-help", "help"]:
 
 	OPTIONS:
 
-	--snps			Mummer "snps" file from 'show-snps -T'						[mandatory]
-	--reference		Reference genome FASTA file									[mandatory]
-	--type			Restrict the output to SNP|INDEL|ALL						[ALL]
-	--head-in		Use this flag if the file has a header						[off]
-	--head-out		Add a newly-generated VCF header to the output				[off]
-	--no-Ns			Exclude variants featuring Ns								[off]
+	--snps			   Mummer "snps" file from 'show-snps -T'					[mandatory]
+	--reference		   Reference genome FASTA file								[mandatory]
+	--type			   Restrict the output to SNP|INDEL|ALL						[ALL]
+	--input-header	   Use this flag if the file has a header					[off]
+	--output-header	   Add a newly-generated VCF header to the output			[off]
+	--no-Ns			   Exclude variants featuring Ns							[off]
 
 	""")
 
