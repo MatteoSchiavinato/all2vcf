@@ -131,17 +131,18 @@ def collapse_snps(Sorted_snps):
 def collapse_indels(Indels):
 	# initialize list of collapsed indels
 	Collapsed_indels = []
+	pos_old = None
+	orig_pos_old = None
 
 	# iterate over each line of the indels (i.e. each indel)
 	for line in Indels:
 		# split the line into the fields
 		(scaffold, pos, ID, ref, alt, qual, filt, var_type, orig_pos) = line.rstrip("\n\r\b").split("\t")
-
 		# ------------------------------------------------------------------
 		# first iteration // Collapsed_indels is long 0 (no elements inside)
 		if len(Collapsed_indels) == 0:
 			# append the fields that were just generated
-			Collapsed_indels.append([scaffold, pos, ID, ref, alt, qual, filt, var_type, orig_pos])
+			Collapsed_indels.append([scaffold, pos, ID, ref, alt, qual, filt, var_type, f"{scaffold}:{pos}"])
 
 		# -------------------------------------------------------------
 		# from second iteration on // Collapsed_indels is longer than 0
@@ -159,8 +160,9 @@ def collapse_indels(Indels):
 		# this because they are not present in the reference
 		# so we don't need the pos_old +1, but just the pos_old
 		# for the comparison
-		elif ((int(pos) == pos_old) and (ref == ".") and (orig_pos == orig_pos_old)) or \
-		     ((int(pos) == pos_old+1) and (alt == ".") and (orig_pos == orig_pos_old)):
+
+		elif ((int(pos) == int(pos_old)) and (ref == ".") and (int(orig_pos.split(":")[1]) == int(orig_pos_old.split(":")[1])+1)) or \
+			 ((int(pos) == pos_old+1) and (alt == ".") and (orig_pos == orig_pos_old)):
 
 			# ----------
 			# insertions
@@ -177,6 +179,7 @@ def collapse_indels(Indels):
 					# add the new alternative position to all present insertions
 					# one by one
 					x = ",".join([str(indel) + str(alt) for indel in Tmp_insertions])
+
 					# reassign the alternative allele field
 					# of the last collapsed_indels record
 					Collapsed_indels[-1][4] = x
@@ -194,7 +197,7 @@ def collapse_indels(Indels):
 				Collapsed_indels[-1][3] = str(Collapsed_indels[-1][3]) + str(ref)
 
 		else:
-			Collapsed_indels.append([scaffold, pos, ID, ref, alt, qual, filt, var_type, orig_pos])
+			Collapsed_indels.append([scaffold, pos, ID, ref, alt, qual, filt, var_type, f"{scaffold}:{pos}"])
 
 		pos_old = int(pos)
 		orig_pos_old = orig_pos
@@ -366,6 +369,7 @@ if __name__ == "__main__":
 
 	Vcf_lines = infer_var_type(Vcf_lines)
 	Vcf_lines = collapse_variants(args.reference, Vcf_lines)
+
 	Vcf_lines = select_by_type(Vcf_lines, args.type)
 	Vcf_lines = sort_vcf_lines(Vcf_lines)
 
