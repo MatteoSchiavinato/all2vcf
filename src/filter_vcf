@@ -163,8 +163,8 @@ def covdepth(line, info, genotype, args):
 					return "Coverage_depth"
 
 		except:
-			sys.stderr.write(f"ERROR: There was an error parsing DP/DP4/ADF/ADR/SAC information from your VCF file \n")
-			sys.exit()
+				sys.stderr.write(f"ERROR: There was an error parsing DP/DP4/ADF/ADR/SAC information from your VCF file \n")
+				sys.exit()
 
 	else:
 		return True
@@ -202,56 +202,73 @@ def mqzf(line, info, genotype, args):
 def altfrac(line, info, genotype, args):
 
 	if args.alt_frac > 0:
-		try:
-			if args.both_strands:
-				try:
-					if args.GATK:
-						split_cov = genotype["SAC"].split(",")
-					else:
-						split_cov = info["DP4"].split(",")
-					#
-					for_cov = [split_cov[i] for i in range(0,len(split_cov)) if i%2==0]
-					rev_cov = [split_cov[i] for i in range(0,len(split_cov)) if i%2==1]
-				except KeyError:
-					try:
-						for_cov = info["ADF"].split(",")
-						rev_cov = info["ADR"].split(",")
-					except KeyError:
-						sys.stderr.write("ERROR: The --both-strands option is not applicable\n")
-						sys.stderr.write("Your VCF file doesn't contain DP4 or ADF/ADR\n\n")
-						sys.exit()
-
-				tot_for_cov = float(0)
-				for x in for_cov:
-					tot_for_cov += float(x)
-				tot_rev_cov = float(0)
-				for x in rev_cov:
-					tot_rev_cov += float(x)
-				alt_for_cov = float(0)
-				for x in for_cov[1:]:
-					alt_for_cov += float(x)
-				alt_rev_cov = float(0)
-				for x in rev_cov[1:]:
-					alt_rev_cov += float(x)
-				if float(alt_for_cov / tot_for_cov) >= float(args.alt_frac) and \
-				float(alt_rev_cov / tot_rev_cov) >= float(args.alt_frac):
-					return True
+		# try:
+		if args.both_strands:
+			try:
+				if args.GATK:
+					split_cov = genotype["SAC"].split(",")
 				else:
-					return "Alternative_allele_fraction"
+					split_cov = info["DP4"].split(",")
+				#
+				for_cov = [split_cov[i] for i in range(0,len(split_cov)) if i%2==0]
+				rev_cov = [split_cov[i] for i in range(0,len(split_cov)) if i%2==1]
+			except KeyError:
+				try:
+					for_cov = info["ADF"].split(",")
+					rev_cov = info["ADR"].split(",")
+				except KeyError:
+					sys.stderr.write("ERROR: The --both-strands option is not applicable\n")
+					sys.stderr.write("Your VCF file doesn't contain DP4 or ADF/ADR\n\n")
+					sys.exit()
+
+			tot_for_cov = float(0)
+			for x in for_cov:
+				tot_for_cov += float(x)
+			tot_rev_cov = float(0)
+			for x in rev_cov:
+				tot_rev_cov += float(x)
+			alt_for_cov = float(0)
+			for x in for_cov[1:]:
+				alt_for_cov += float(x)
+			alt_rev_cov = float(0)
+			for x in rev_cov[1:]:
+				alt_rev_cov += float(x)
+			if float(alt_for_cov / tot_for_cov) >= float(args.alt_frac) and \
+			float(alt_rev_cov / tot_rev_cov) >= float(args.alt_frac):
+				return True
 			else:
-				alt_count = 0
+				return "Alternative_allele_fraction"
+		else:
+			alt_count = 0
+			try:
 				for x in genotype["AD"].split(",")[1:]:
 					alt_count += int(x)
 				ref_count = int(genotype["AD"].split(",")[0])
 				tot_count = ref_count + alt_count
+
+			except KeyError:
+				try:
+					split_cov = info["DP4"].split(",")
+					split_cov = [int(x) for x in split_cov]
+					ref_count = split_cov[0] + split_cov[1]
+					alt_count = split_cov[2] + split_cov[3]
+					tot_count = ref_count + alt_count
+
+				except KeyError:
+					sys.stderr.write(f"ERROR: There was an error parsing AD/ADF/ADR/DP4/SAC information from your VCF file \n")
+					sys.exit()
+
+			try:
 				if float(alt_count) / float(tot_count) >= float(args.alt_frac):
 					return True
 				else:
 					return "Alternative_allele_fraction"
+			except ZeroDivisionError:
+				return "Alternative_allele_fraction"
 
-		except:
-			sys.stderr.write(f"ERROR: There was an error parsing AD/ADF/ADR/DP4/SAC information from your VCF file \n")
-			sys.exit()
+		# except:
+		# 	sys.stderr.write(f"ERROR: There was an error parsing AD/ADF/ADR/DP4/SAC information from your VCF file \n")
+		# 	sys.exit()
 
 	else:
 		return True
