@@ -14,26 +14,26 @@ if len(sys.argv) <= 1:
 if sys.argv[1] in ["-h", "--help", "getopt", "usage", "-help", "help"]:
 	sys.exit('''
 
-	--------------------------------------------------------------------------------
-	all2vcf stats
-	--------------------------------------------------------------------------------
+   --------------------------------------------------------------------------------
+   all2vcf stats
+   --------------------------------------------------------------------------------
 
-	USAGE:  all2vcf stats [ options ]
+   USAGE:  all2vcf stats [ options ]
 
-	Obtain statistics on the provided VCF files.
+   Obtain statistics on the provided VCF files.
 
-	OPTIONS:
+   OPTIONS:
 
-	--vcf               Input VCF files to compute statistics on				[mandatory]
-	--vcf-names         Names of the input VCF files, IN THE SAME ORDER			[mandatory]
-	--gff				GFF file to extract "gene" annotations from.			[off]
-						A file will be created for each annotation
-						feature (e.g. "gene", "exon", ...)
-	--exclude-chrom     SPACE-separated list of seq to be excluded				[off]
-	--basename          Prefix for output file(s)								[all2vcf.stats]
-	--output-dir        Output directory (created if non-existent)				[current]
+   --vcf             Input VCF files to compute statistics on                   [mandatory]
+   --vcf-names       Names of the input VCF files, IN THE SAME ORDER            [mandatory]
+   --gff             GFF file to extract "gene" annotations from.               [off]
+                     A file will be created for each annotation
+                     feature (e.g. "gene", "exon", .. )
+   --exclude-chrom   SPACE-separated list of seq to be excluded                 [off]
+   --basename        Prefix for output file(s)                                  [all2vcf.stats]
+   --output-dir      Output directory (created if non-existent)                 [current]
 
-	''')
+				''')
 
 
 # parser
@@ -107,11 +107,12 @@ def get_feature_stats(stats, gff_input):
 			pos = int(line[2])
 			k = 0
 			# assess if contained within feature
-			for feat_range in Coords[chrom]:
-				if feat_range[0] <= pos <= feat_range[1]:
-					# if so: append to main list
-					Kept_variants.append(line[1:])
-					break
+			if chrom in Coords.keys():
+				for feat_range in Coords[chrom]:
+					if feat_range[0] <= pos <= feat_range[1]:
+						# if so: append to main list
+						Kept_variants.append(line[1:])
+						break
 		# convert main list to dataframe
 		feature_stat_df = pd.DataFrame(Kept_variants)
 		feature_stat_df.columns = ["CHROM", "POS", "VAR_TYPE", "REF", "ALT"]
@@ -186,7 +187,7 @@ for input_file in args.vcf:
 	mask2 = ~df.INFO.str.contains("SVTYPE")
 	mask3 = ~df.INFO.str.contains("INDEL")
 	num_indels = df.loc[mask1 & mask2 & mask3, "INFO"].shape[0]
-	sys.stderr.write(f"[{at()}] Found {num_indels} candidate indels that where the annotation did not comply the VCF standard\n")
+	sys.stderr.write(f"[{at()}] Found {num_indels} candidate indels with non-standard VCF annotation\n")
 	df.loc[mask1 & mask2 & mask3, "INFO"] = "INDEL;" + df.loc[mask1 & mask2 & mask3, "INFO"]
 	sys.stderr.write(f"[{at()}] The annotation was fixed for these {num_indels} indels\n")
 
