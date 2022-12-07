@@ -206,6 +206,7 @@ def collapse_indels(Indels):
 def add_indel_first_base(Collapsed_indels, Sequences):
 	Indels_w_first_base = []
 	Joined_indels = [ "\t".join(x)+"\n" for x in Collapsed_indels ]
+	
 	for line in Joined_indels:
 		(scaffold, pos, ID, ref, alt, qual, filt, var_type, orig_pos) = line.rstrip("\n\r\b").split("\t")
 		# double -1, one is to make it 0-based, one is to take the position before the listed one
@@ -218,7 +219,10 @@ def add_indel_first_base(Collapsed_indels, Sequences):
 			alt = ref_position
 
 		# scaling pos within the file to the position before according to the guidelines
-		pos = str(int(pos)-1)
+		# pos = str(int(pos)-1)
+		# 07/12/2022: this does not seem to be used anymore by nucmer 
+		# no need to do this scaling anymore 
+		
 		ref = ref.upper()
 		alt = alt.upper()
 		Indels_w_first_base.append([scaffold, pos, ID, ref, alt, qual, filt, var_type, orig_pos])
