@@ -12,25 +12,23 @@ if len(sys.argv) <= 1:
 if sys.argv[1] in ["-h", "--help", "getopt", "usage", "-help", "help"]:
 	sys.exit("""
 
-	--------------------------------------------------------------------------------
-	all2vcf mummer
-	--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+all2vcf mummer
 
-	USAGE:  all2vcf mummer [ options ]
+--------------------------------------------------------------------------------
+USAGE:  all2vcf mummer [ options ]
+Convert Mummer SNP/indel output as produced by the 'show-snps -T' command to
+a pseudo-VCF format.
 
-	Convert Mummer SNP/indel output as produced by the 'show-snps -T' command to
-	a pseudo-VCF format.
-
-	OPTIONS:
-
-	--snps			   Mummer "snps" file from 'show-snps -T'					[mandatory]
-	--reference		   Reference genome FASTA file								[mandatory]
-	--type			   Restrict the output to SNP|INDEL|ALL						[ALL]
-	--input-header	   Use this flag if the file has a header					[off]
-	--output-header	   Add a newly-generated VCF header to the output			[off]
-	--no-Ns			   Exclude variants featuring Ns							[off]
-
-	""")
+OPTIONS:
+ --snps            Mummer "snps" file from 'show-snps -T'               [mandatory]
+ --reference       Reference genome FASTA file                          [mandatory]
+ --type            Restrict the output to SNP|INDEL|ALL                 [ALL]
+ --input-header    Use this flag if the file has a header               [off]
+ --output-header   Add a newly-generated VCF header to the output       [off]
+ --no-Ns           Exclude variants featuring Ns                        [off]
+ 
+""")
 
 
 
@@ -221,6 +219,8 @@ def add_indel_first_base(Collapsed_indels, Sequences):
 
 		# scaling pos within the file to the position before according to the guidelines
 		pos = str(int(pos)-1)
+		ref = ref.upper()
+		alt = alt.upper()
 		Indels_w_first_base.append([scaffold, pos, ID, ref, alt, qual, filt, var_type, orig_pos])
 
 	return Indels_w_first_base
@@ -272,6 +272,7 @@ def collapse_variants(Reference, Vcf_lines):
 
 	Indels = [ "\t".join([str(y) for y in x]) for x in Indel_tuples ]
 	Collapsed_indels = collapse_indels(Indels)
+	
 	### add prior base to indels ###
 	Collapsed_indels = add_indel_first_base(Collapsed_indels, Sequences)
 
@@ -369,7 +370,7 @@ if __name__ == "__main__":
 
 	Vcf_lines = infer_var_type(Vcf_lines)
 	Vcf_lines = collapse_variants(args.reference, Vcf_lines)
-
+	
 	Vcf_lines = select_by_type(Vcf_lines, args.type)
 	Vcf_lines = sort_vcf_lines(Vcf_lines)
 
